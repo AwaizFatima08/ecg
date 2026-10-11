@@ -22,7 +22,7 @@ rsync -a --delete "${EXCLUDES[@]}" --exclude 'validation/data/' "$SRC/" "$LOCAL/
 echo "== Local snapshot archive"
 tar -C "$(dirname "$SRC")" -czf "$LOCAL/ecg_${STAMP}.tar.gz" \
   --exclude='*/build' --exclude='*/.dart_tool' --exclude='*/node_modules' --exclude='*/.gradle' \
-  --exclude='*/.venv' --exclude='*/validation/data' \
+  --exclude='*/.venv' --exclude='*/validation/data' --exclude='*/validation/images' \
   "$(basename "$SRC")"
 # Keep the 10 newest snapshots.
 ls -1t "$LOCAL"/ecg_*.tar.gz | tail -n +11 | xargs -r rm --
