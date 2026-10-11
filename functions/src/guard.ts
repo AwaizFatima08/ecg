@@ -52,6 +52,8 @@ export async function assertEnabled(cfg: RuntimeConfig) {
 
 /** Atomically counts one reading for this anonymous user today; throws when over the limit. */
 export async function consumeDailyQuota(uid: string, limit: number): Promise<void> {
+  // Local testing without the Firestore emulator (it needs Java 21): no counter.
+  if (process.env.FUNCTIONS_EMULATOR === "true" && !process.env.FIRESTORE_EMULATOR_HOST) return;
   const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const ref = getFirestore().doc(`usage/${uid}_${day}`);
   // TTL policy on `expireAt` deletes counters after 2 days (set once in the console).
