@@ -1,0 +1,11 @@
+rules_version = '2';
+// The app never reads or writes Firestore directly. The only data is the
+// per-user daily usage counter, written by Cloud Functions via the Admin SDK
+// (which bypasses these rules). No ECG data, results or patient data exist here.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
