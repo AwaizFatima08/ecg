@@ -1,0 +1,37 @@
+# Flutter/Dart
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/ios/Flutter/.last_build_id
+
+# Secrets - never commit (AI provider keys live only in Cloud Functions config)
+secrets/
+.env
+.env.*
+**/google-services.json
+**/GoogleService-Info.plist
+**/key.properties
+**/*.jks
+**/*.keystore
+firebase-debug.log
+firestore-debug.log
+.firebase/
+
+# Validation data - datasets and ECG images are never committed (reports only)
+validation/data/
+validation/images/
+validation/real_ecgs/
+validation/.venv/
+**/__pycache__/
+
+# Node
+**/node_modules/
+
+# IDE / OS
+**/.idea/
+**/*.iml
+.vscode/
+.DS_Store
+*.log
