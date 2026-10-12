@@ -20,32 +20,35 @@ Median correlation with the true signal: **0.96 on scans, 0.93 on photos**.
 **Classifier on clean signals**, PTB-XL test fold (`validation/results/classifier_clean.md`): macro-AUC 0.96.
 ST-elevation injury 0.97, AF 0.98, LBBB/RBBB ≈1.0, PVCs 0.99, LVH 0.96. Weak: nonspecific IVCD 0.74.
 
-**End to end, through the alert rules** (`validation/results/phase0_engine-v1.md`):
+**End to end, through the alert rules** (`validation/results/phase0_engine-v*.md`):
 
-| | engine-v0 (90 %-sensitivity cut-offs) | engine-v1 (re-tuned cut-offs) |
-|---|---|---|
-| Critical → CRITICAL, scan / photo | 61 % / 64 % | **83 % / 83 %** |
-| Critical → at least URGENT, scan / photo | 89 % / 94 % | 92 % / 94 % |
-| ST-elevation injury → CRITICAL | 72 % | 89 % |
-| Complete heart block → CRITICAL | 29–36 % | 64 % |
-| Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / **50 %** |
-| Normal → "no critical pattern" | 0–13 % | 0 % |
+| | v0 (clean, 90 % cut-offs) | v1 (clean, re-tuned) | **v2 (fine-tuned on digitized)** |
+|---|---|---|---|
+| Critical → CRITICAL, scan / photo | 61 % / 64 % | 83 % / 83 % | 78 % / 75 % |
+| Critical → at least URGENT, scan / photo | 89 % / 94 % | 92 % / 94 % | **92 % / 94 %** |
+| ST-elevation injury → CRITICAL, scan / photo | 72 % | 89 % | 83 % / 78 % |
+| Complete heart block → CRITICAL, scan / photo | 29–36 % | 64 % | 71 % / 64 % |
+| Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / 50 % | **7 % / 3 %** |
+| Normal → "no critical pattern", scan / photo | 13 % / 0 % | 0 % | **57 % / 47 %** |
 
-**Reading:** the approach works; ST-elevation and acute-MI detection is already strong. Two problems remain:
-1. **Domain shift.** The cut-offs and the classifier were tuned on clean signals; digitized photos shift the
-   scores, which makes normal ECGs look abnormal. Fix: build a digitized training/calibration set (render + digitize
-   a few thousand PTB-XL records), fine-tune the classifier on it, and set the cut-offs on digitized data.
-2. **Heart block.** PTB-XL has about 30 second- and third-degree AV blocks. Fix: a dedicated rule-based
-   AV-dissociation detector (P waves vs QRS timing on the 10 s lead II strip), plus more data later.
+**v2** (12 Oct 2026): 4,600 PTB-XL records were rendered (70 % photo look) and digitized on homidev's RTX 5060 Ti in
+2 h 45 min, with 0 failures. The classifier was then fine-tuned on digitized + clean signals, and the cut-offs were set on
+digitized validation data (`validation/results/finetune_digitized.md`). The domain-shift problem is largely solved:
+false alarms on normal ECGs fell from 50 % to 3 % on photos, while critical → at least URGENT stayed at 92–94 %.
+
+Critical cases still below URGENT in v2 (for Homi's review):
+- `ptbxl08611`: early inferior MI (ST elevation III/aVF, reciprocal depression). **A real miss**; the engine reported pre-excitation instead.
+- `ptbxl21243`: AF + PVCs + old MI + conduction disease + injury labels. The engine returned **no findings**, a serious failure mode.
+- `ptbxl18840`: labelled injury (50 % likelihood) but the PTB-XL report only says anterior T abnormality. The engine found T inversion. Debatable.
 
 Not yet measured by the engine: PR/QRS/QT intervals and axis (null in v1; the classifier covers bundle-branch
 patterns and long QT indirectly). Not covered by PTB-XL at all: VT/VF, asystole, hyperkalaemia, Brugada.
 
 ## Next steps (in order)
-1. **Digitized dataset**: render PTB-XL folds 1–9 as photos (as in Phase 0) and digitize them. At about 20 s per image
-   on homi-nas's CPU this takes days; on a CUDA GPU it is minutes to hours. Options: CUDA PyTorch for the GTX 1050 Ti
-   on homi-nas, or homidev's RTX 5060 Ti (outside homidev's approved asset use, so Homi's call).
-2. Fine-tune the classifier on digitized signals; set cut-offs on the digitized validation fold; re-run Phase 0.
+1. ~~Digitized dataset + fine-tune~~: done (v2). Homi approved homidev's GPU for this job (12 Oct 2026);
+   the job runs in `~/ecg-engine-job/` only (`validation/jobs/homidev_digitize/`).
+2. Safety net for "abnormal-looking but nothing found": if the classifier's "normal" score is low but no finding
+   passes its cut-off, report at least ABNORMAL with "review the ECG yourself" (fixes the `ptbxl21243` pattern).
 3. AV-dissociation / heart-block detector; interval measurements (PR, QRS, QTc) from the lead II strip.
 4. Phone port (below), then closed testing with doctors.
 

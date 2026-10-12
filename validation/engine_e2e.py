@@ -93,10 +93,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="engine-v0")
     ap.add_argument("--digitized", type=Path, default=HERE / "engines" / "out")
+    ap.add_argument("--model", type=Path, default=HERE / "models" / "ecgnet.pt")
+    ap.add_argument("--meta", type=Path, default=HERE / "models" / "ecgnet_meta.json")
     a = ap.parse_args()
 
-    ck = torch.load(HERE / "models" / "ecgnet.pt", map_location="cpu")
-    meta = json.load(open(HERE / "models" / "ecgnet_meta.json"))
+    ck = torch.load(a.model, map_location="cpu")
+    meta = json.load(open(a.meta))
     model = EcgNet(len(ck["labels"]), ck["width"])
     model.load_state_dict(ck["state_dict"])
     model.eval()
@@ -116,7 +118,7 @@ def main() -> int:
                 "axis": {"label": "cannot_assess", "confidence": 0}, "findings": [],
                 "model_notes": "Digitizer could not extract the trace.",
             }
-            readings.append({"image": image, "model": "engine-v0", "promptVersion": a.run, "ms": 0, "reading": reading})
+            readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
             continue
         with torch.no_grad():
             p = torch.sigmoid(model(torch.from_numpy(paper_view(x[None], None)))).numpy()[0]
@@ -150,7 +152,7 @@ def main() -> int:
             "findings": findings,
             "model_notes": "On-device engine v0: digitized trace + small classifier. Intervals and axis not yet measured.",
         }
-        readings.append({"image": image, "model": "engine-v0", "promptVersion": a.run, "ms": 0, "reading": reading})
+        readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
 
     tmp = HERE / "images" / f"readings_{a.run}.raw.jsonl"
     tmp.write_text("\n".join(json.dumps(r) for r in readings) + "\n")
