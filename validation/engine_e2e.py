@@ -21,6 +21,7 @@ import torch
 from scipy.signal import butter, filtfilt, find_peaks
 
 from ecg_measure import measure
+from train_rhythm import RhythmNet, prep as rhythm_prep
 from train_classifier import COLUMN, EcgNet, paper_view
 
 HERE = Path(__file__).resolve().parent
@@ -95,6 +96,7 @@ def main() -> int:
     ap.add_argument("--run", default="engine-v0")
     ap.add_argument("--digitized", type=Path, default=HERE / "engines" / "out")
     ap.add_argument("--model", default=str(HERE / "models" / "ecgnet.pt"), help="checkpoint, or comma-separated list for an ensemble")
+    ap.add_argument("--no-rhythm", action="store_true", help="disable the lethal-rhythm (VT/VF/asystole) model")
     ap.add_argument("--meta", type=Path, default=HERE / "models" / "ecgnet_meta.json")
     a = ap.parse_args()
 
@@ -106,6 +108,10 @@ def main() -> int:
         m_.load_state_dict(ck["state_dict"])
         models.append(m_.eval())
     labels, thr = ck["labels"], meta["thresholds"]
+    rhythm_net = None
+    if (HERE / "models" / "rhythm.pt").exists() and not a.no_rhythm:
+        rk = torch.load(HERE / "models" / "rhythm.pt", map_location="cpu")
+        rhythm_net = RhythmNet(); rhythm_net.load_state_dict(rk["state_dict"]); rhythm_net.eval()
 
     readings = []
     for f in sorted(a.digitized.glob("*_timeseries_canonical.csv")):
@@ -144,6 +150,16 @@ def main() -> int:
             else:
                 findings.append({"code": code, "name": name, "leads": [], "category": cat, "confidence": conf})
         af_like = bool(fired & {"atrial_fibrillation", "atrial_flutter"})
+        # Lethal-rhythm model on the lead II strip (VT / VF / asystole). Any of them is CRITICAL, so the alarm
+        # fires on P(lethal) >= 0.5 and names the most likely one; the subtype itself is less reliable.
+        if rhythm_net is not None:
+            with torch.no_grad():
+                pr = torch.softmax(rhythm_net(torch.from_numpy(rhythm_prep(x[1][None]))), 1).numpy()[0]
+            if 1 - pr[0] >= 0.5:
+                k = int(np.argmax(pr[1:])) + 1
+                code = ["", "ventricular_tachycardia", "ventricular_fibrillation", "asystole"][k]
+                rhythm = {"code": code, "label": "Possible VT / VF or asystole (lethal-rhythm check)",
+                          "regular": regular, "confidence": float(min(0.95, 1 - pr[0]))}
         # Heart block: more P waves than QRS with a slow ventricular rate (not in AF/flutter). URGENT, not
         # CRITICAL on its own: 2 % false positives on normal ECGs in the PTB-XL check.
         if m.get("av_block_suspected") and not af_like:

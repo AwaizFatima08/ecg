@@ -38,3 +38,4 @@ validation/.venv/
 validation/engines/
 validation/models/
 validation/jobs/homidev_digitize/bundle/
+validation/images_multan/
