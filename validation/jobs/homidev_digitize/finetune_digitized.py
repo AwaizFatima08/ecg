@@ -31,6 +31,7 @@ WORK, OUT = HERE / "work", HERE / "out"
 DIGI_DIR = HERE / os.environ.get("DIGITIZED_DIR", "work/digitized")
 TAG = os.environ.get("OUT_TAG", "digitized")
 SEED = int(os.environ.get("SEED", "1"))
+BASE_MODEL = HERE / os.environ.get("BASE_MODEL", "models/ecgnet.pt")  # base checkpoint to fine-tune
 EPOCHS = int(os.environ.get("EPOCHS", "25"))
 from threshold_policy import DROP, thresholds as policy_thresholds  # noqa: E402
 
@@ -83,10 +84,10 @@ def main() -> int:
     Xc = load(clean_df)
     Yc = np.stack([Yall[i] for i in clean_df.index])
 
-    ck = torch.load(HERE / "models" / "ecgnet.pt", map_location="cpu")
+    ck = torch.load(BASE_MODEL, map_location="cpu")
     names = ck["labels"]
     model = EcgNet(len(names), ck["width"]); model.load_state_dict(ck["state_dict"]); model.to(dev)
-    old_meta = json.load(open(HERE / "models" / "ecgnet_meta.json"))
+    old_meta = {"thresholds": {}}
 
     tr, va = split == "train", split == "val"
     Xt, Yt, Xv, Yv = Xd[tr], Yd[tr], Xd[va], Yd[va]

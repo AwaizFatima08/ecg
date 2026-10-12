@@ -47,8 +47,23 @@ ECG. Through the AF+WPW rule (M3) this produced spurious CRITICAL alerts — inc
 "catches". `validation/threshold_policy.py` (v2) fixes rare labels at 0.3 and floors all cut-offs at 0.05. The v5 numbers are
 the honest ones. Remaining false alarms on normals are mostly `st_depression` (4/30 per variant) and `long_qt`.
 
-**Real paper prints (Multan dataset, teacher digitizer, partial, 282 of 928):** acute-MI prints ≥ URGENT 73 % (21/49
-CRITICAL); "abnormal heartbeat" prints ≥ ABNORMAL 96 %; normal prints not yet scored.
+**Real paper prints (Multan dataset, 928 EDAN SE-3 prints, teacher digitizer, corrected cut-offs;
+`validation/results/multan_multan-teacher-v5.md`, review page `images_multan/review_multan-teacher-v5.html`):**
+
+| dataset label | n | ≥ expected tier | CRITICAL | URGENT | ABNORMAL | no critical pattern |
+|---|---|---|---|---|---|---|
+| acute MI (≥ URGENT) | 239 | 80 % | 111 | 80 | 48 | 0 |
+| history of MI (≥ ABNORMAL) | 172 | 100 % | 102 | 54 | 16 | 0 |
+| abnormal heartbeat (≥ ABNORMAL) | 233 | 96 % | 45 | 109 | 69 | 10 |
+| normal | 284 | 20 % | 4 | 42 | 182 | 56 |
+
+Normal prints are over-called: 16 % URGENT/CRITICAL (mostly `st_depression`) and 64 % ABNORMAL (atrial ectopics,
+T-wave changes, and **broad QRS from the measurement**: 28 % of normal prints measure ≥ 120 ms, vs 13 % of PTB-XL
+photos and 1 % of clean PTB-XL signals — the digitized trace blurs QRS edges, and EDAN prints are low-passed at 25 Hz).
+"History of MI" prints fire `stemi_pattern` in 62 % — Homi to judge on the review page whether these show real
+persistent ST elevation. Fixes planned: calibrate the QRS detector so clean and digitized versions of the same record agree
+(`results/qrs_calibration.json`), low-pass (20–40 Hz) augmentation in training to imitate printer filters, and the
+round-2 classifier (66 k ECGs, strong "normal" class).
 
 **Heart block is the weak point.** PTB-XL has 16 complete and 14 second-degree blocks, far too few to learn from.
 The rule-based AV-block check reaches URGENT on most of them (9/14 scans); a slow-rate escalation to CRITICAL
