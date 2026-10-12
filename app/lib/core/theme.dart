@@ -39,8 +39,7 @@ class Copy {
     'For qualified clinicians only. Not for patients or the public.',
     'Decision support only. It does not diagnose, and it can be wrong — including missing a dangerous pattern.',
     'Always read the ECG yourself and act on your own clinical judgment.',
-    'Do not upload patient names, ID numbers or other identifying details. Crop the printed header away.',
-    'Nothing is saved by this app or its server. The image is sent over an encrypted connection to an AI service '
-        '(Anthropic) for reading, under that service\'s data terms.',
+    'Crop away the printed header with patient names and ID numbers before reading — they are not needed.',
+    'The ECG is read on this phone. The image is never uploaded, and nothing is saved.',
   ];
 }

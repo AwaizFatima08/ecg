@@ -5,3 +5,4 @@
 # OkHttp (pulled in by uCrop)
 -dontwarn okhttp3.**
 -dontwarn okio.**
+-keep class ai.onnxruntime.** { *; }

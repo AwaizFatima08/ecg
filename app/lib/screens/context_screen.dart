@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/clinical_context.dart';
 import '../models/ecg_result.dart';
-import '../services/ecg_api.dart';
+import '../engine/engine.dart';
 
 /// Optional clinical context (design-v1 Section 7.3, screen 7).
 /// Context can only RAISE the alert level. Nothing entered here is stored.
@@ -20,20 +20,13 @@ class ContextScreen extends StatefulWidget {
 class _ContextScreenState extends State<ContextScreen> {
   final _form = GlobalKey<FormState>();
   late final ClinicalContext _ctx = widget.initial;
-  bool _busy = false;
 
-  Future<void> _submit() async {
+  void _submit() {
     if (!_form.currentState!.validate()) return;
     _form.currentState!.save();
-    setState(() => _busy = true);
-    try {
-      final a = await EcgApi.instance.reassess(widget.result, _ctx);
-      if (mounted) Navigator.of(context).pop(a);
-    } on EcgApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    // Re-assessed on the phone with the same alert rules; nothing is sent anywhere.
+    final a = EcgEngine.instance.reassess(widget.result, _ctx);
+    Navigator.of(context).pop(a);
   }
 
   String? _range(String? v, int min, int max) {
@@ -138,12 +131,7 @@ class _ContextScreenState extends State<ContextScreen> {
                   ),
               ]),
               const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 3))
-                    : const Text('Update alert level'),
-              ),
+              FilledButton(onPressed: _submit, child: const Text('Update alert level')),
             ],
           ),
         ),

@@ -25,8 +25,11 @@ import torch.nn as nn
 
 from train_classifier import DB, EcgNet, auc, label_vector, load, paper_view
 
+import os
 HERE = Path(__file__).resolve().parent
 WORK, OUT = HERE / "work", HERE / "out"
+DIGI_DIR = HERE / os.environ.get("DIGITIZED_DIR", "work/digitized")
+TAG = os.environ.get("OUT_TAG", "digitized")
 HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "st_depression_ischaemia", "atrial_fibrillation",
              "atrial_flutter", "svt", "second_or_third_degree_av_block", "long_qt", "wpw_preexcitation"}
 DROP = {"nonspecific_ivcd"}
@@ -80,12 +83,12 @@ def main() -> int:
     Xd, Yd, split, ids = [], [], [], []
     failed = 0
     for r in man:
-        x = load_digitized(WORK / "digitized" / f"{r['id']}_timeseries_canonical.csv")
+        x = load_digitized(DIGI_DIR / f"{r['id']}_timeseries_canonical.csv")
         if x is None:
             failed += 1; continue
         Xd.append(x); Yd.append(Yall[int(r["ecg_id"])]); split.append(r["split"]); ids.append(int(r["ecg_id"]))
     Xd, Yd, split = np.stack(Xd), np.stack(Yd), np.array(split)
-    np.savez_compressed(OUT / "digitized_signals.npz", x=Xd.astype(np.float16), y=Yd, split=split, ecg_id=np.array(ids))
+    np.savez_compressed(OUT / f"{TAG}_signals.npz", x=Xd.astype(np.float16), y=Yd, split=split, ecg_id=np.array(ids))
     print(f"digitized usable: {len(Xd)}  failed: {failed}", flush=True)
 
     held = {int(r["ecg_id"]) for r in csv.DictReader(open(HERE / "phase0_manifest.csv"))}
@@ -137,17 +140,17 @@ def main() -> int:
     model.load_state_dict(best_state)
     Pv = predict(Xv)
     thr = thresholds(names, Yv, Pv, old_meta["thresholds"])
-    torch.save({"state_dict": best_state, "labels": names, "width": ck["width"]}, OUT / "ecgnet_digitized.pt")
+    torch.save({"state_dict": best_state, "labels": names, "width": ck["width"]}, OUT / f"ecgnet_{TAG}.pt")
     json.dump({"labels": names, "thresholds": thr, "digitized_val_macro_auc": best, "base_macro_auc": base,
                "policy": "cut-offs set on digitized validation records: >=90% sensitivity for urgent/critical labels, "
                          "Youden J otherwise; dropped: " + ", ".join(sorted(DROP))},
-              open(OUT / "ecgnet_digitized_meta.json", "w"), indent=1)
+              open(OUT / f"ecgnet_{TAG}_meta.json", "w"), indent=1)
     lines = [f"# Fine-tune on digitized signals", "", f"Digitized records: {len(Xd)} ({tr.sum()} train, {va.sum()} val); "
              f"failed to digitize: {failed}", f"Digitized-val macro-AUC: base {base:.4f} → fine-tuned {best:.4f}", "",
              "| label | val positives | AUC | cut-off |", "|---|---|---|---|"]
     for k, n in enumerate(names):
         lines.append(f"| {n} | {int(Yv[:, k].sum())} | {auc(Yv[:, k], Pv[:, k]):.3f} | {thr[n]:.3f} |")
-    (OUT / "finetune_report.md").write_text("\n".join(lines) + "\n")
+    (OUT / f"finetune_{TAG}_report.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     return 0
 

@@ -1,6 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +8,8 @@ import '../core/env.dart';
 import '../firebase_options.dart';
 import '../firebase_options_demo.dart';
 
-/// Start-up, Remote Config (kill switch, minimum version, disclaimer version)
+/// Start-up, Remote Config (kill switch, minimum version, disclaimer version — the only network use;
+/// ECGs are read on the phone)
 /// and the only thing the app stores locally: which disclaimer version the
 /// doctor accepted. No ECG data is ever stored.
 class AppConfig {
@@ -37,16 +35,6 @@ class AppConfig {
       options: Env.useEmulator ? DemoFirebaseOptions.currentPlatform : DefaultFirebaseOptions.currentPlatform,
     );
 
-    if (Env.useEmulator) {
-      FirebaseFunctions.instanceFor(region: Env.functionsRegion).useFunctionsEmulator(Env.emulatorHost, 5001);
-      await FirebaseAuth.instance.useAuthEmulator(Env.emulatorHost, 9099);
-    } else {
-      // Play Integrity in release; the debug provider (token registered in the
-      // Firebase console) for debug builds on test phones.
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: kReleaseMode ? const AndroidPlayIntegrityProvider() : const AndroidDebugProvider(),
-      );
-    }
 
     final info = await PackageInfo.fromPlatform();
     build = int.tryParse(info.buildNumber) ?? 0;
