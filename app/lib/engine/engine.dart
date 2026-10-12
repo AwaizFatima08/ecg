@@ -14,7 +14,7 @@ import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v4 (2026-10-12)';
+const engineVersion = 'on-device engine v5 (2026-10-13, student U-Net)';
 const rulesVersion = '2026-10-12.1-proposed';
 
 /// Classifier label -> (kind, finding/rhythm code, category, display name). Same table as engine_e2e.MAP.
