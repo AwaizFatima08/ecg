@@ -102,6 +102,10 @@ def paper_view(x: np.ndarray, rng: np.random.Generator | None) -> np.ndarray:
         t = np.linspace(0, 1, 1000)[None, None, :]
         x += rng.normal(0, 0.05, (B, 12, 1)) * np.sin(2 * np.pi * rng.uniform(0.05, 0.5, (B, 12, 1)) * t * 10)  # drift
         x += rng.normal(0, rng.uniform(0.005, 0.03, (B, 1, 1)), x.shape)          # noise
+        if rng.random() < 0.5:                                                     # printer low-pass (EDAN: 25 Hz)
+            from scipy.signal import butter, filtfilt
+            b_, a_ = butter(2, rng.uniform(18, 45) / 50.0)
+            x = filtfilt(b_, a_, x, axis=2).astype(np.float32)
         for b in range(B):                                                         # time jitter + dropouts
             s = int(rng.integers(-5, 6))
             x[b] = np.roll(x[b], s, axis=1)

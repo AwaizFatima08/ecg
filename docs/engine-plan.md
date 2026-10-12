@@ -61,8 +61,11 @@ Normal prints are over-called: 16 % URGENT/CRITICAL (mostly `st_depression`) and
 T-wave changes, and **broad QRS from the measurement**: 28 % of normal prints measure ≥ 120 ms, vs 13 % of PTB-XL
 photos and 1 % of clean PTB-XL signals — the digitized trace blurs QRS edges, and EDAN prints are low-passed at 25 Hz).
 "History of MI" prints fire `stemi_pattern` in 62 % — Homi to judge on the review page whether these show real
-persistent ST elevation. Fixes planned: calibrate the QRS detector so clean and digitized versions of the same record agree
-(`results/qrs_calibration.json`), low-pass (20–40 Hz) augmentation in training to imitate printer filters, and the
+persistent ST elevation. Fixes: **QRS detector calibrated** on 600 clean-vs-digitized pairs (`results/qrs_calibration_vs_clean.json`): the
+velocity threshold moves from 0.15 to 0.30 (median bias 0 ms, 73 % sensitivity / 94 % specificity for QRS ≥ 120 ms
+against the clean-signal measurement) — ABNORMAL over-calls on normals fall from 33 %→17 % (scans) and 47 %→33 %
+(photos) on Phase 0, and Multan normals reading "no critical pattern" rise from 20 % to 26 %; critical detection unchanged
+(94 % ≥ URGENT). Still planned: low-pass (20–40 Hz) augmentation in training to imitate printer filters, and the
 round-2 classifier (66 k ECGs, strong "normal" class).
 
 **Heart block is the weak point.** PTB-XL has 16 complete and 14 second-degree blocks, far too few to learn from.

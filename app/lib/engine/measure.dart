@@ -140,7 +140,7 @@ Measurements measure(List<List<double>> x) {
   for (var k = pre - 8; k < pre + 8; k++) {
     if (vel[k] > vel[peak]) peak = k;
   }
-  final thr = 0.15 * vel[peak] + median(vel.sublist(0, 15));
+  final thr = 0.30 * vel[peak] + median(vel.sublist(0, 15)); // calibrated for digitized traces (see ecg_measure.py)
   var on = peak;
   while (on > 5 && vel[on - 1] > thr) {
     on--;
