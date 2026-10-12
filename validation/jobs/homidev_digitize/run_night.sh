@@ -14,7 +14,7 @@ wait_free() {
   # GPU memory in use by anything other than an idle ComfyUI (~0.3 GB) means someone else is working.
   while true; do
     used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
-    ours=$(pgrep -fc "distill_unet|lite_digitizer|finetune_digitized|render_bulk" || true)
+    ours=$(pgrep -fa "distill_unet|lite_digitizer|finetune_digitized|render_bulk|score_digitizer" | grep -vE "watchdog.sh|run_night.sh" | wc -l)
     if [ "$used" -lt 1500 ] && [ "$ours" -eq 0 ]; then return; fi
     log "waiting: GPU ${used} MiB in use, our jobs running: ${ours}"
     sleep 120
@@ -29,8 +29,10 @@ step() {  # step <name> <pattern-for-watchdog> <command...>
   local pid=$!
   sleep 5
   ./watchdog.sh "$pat" &
+  local wd=$!
   wait $pid
   local rc=$?
+  kill $wd 2>/dev/null
   log "END $name (exit $rc)"
   if grep -q "WATCHDOG STOP" out/watchdog.log 2>/dev/null; then
     log "watchdog stopped a step — halting the queue for safety"; exit 1

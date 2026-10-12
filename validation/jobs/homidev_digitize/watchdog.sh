@@ -2,7 +2,8 @@
 # Hardware watchdog for ECG jobs on homidev: logs RAM/temps every 30 s and stops the job
 # (kills processes matching $1) if available RAM < 3 GB, GPU > 80 C or CPU package > 80 C.
 PAT="$1"; LOG=~/ecg-engine-job/out/watchdog.log
-while pgrep -f "$PAT" > /dev/null; do
+# (exclude this watchdog and the queue runner, whose command lines also contain the pattern)
+while pgrep -fa "$PAT" | grep -vE "watchdog.sh|run_night.sh" | grep -q .; do
   avail=$(awk '/MemAvailable/ {print int($2/1048576)}' /proc/meminfo)
   gpu=$(nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used --format=csv,noheader,nounits | tr -d ' ')
   gt=${gpu%%,*}

@@ -1,0 +1,11 @@
+{
+ "classes": [
+  "other",
+  "vt",
+  "vf",
+  "asystole"
+ ],
+ "input": "(1,1,1000) lead II mV at 100 Hz, median removed, clipped to +/-5",
+ "lethal_threshold": 0.5,
+ "trained_on": "PhysioNet vfdb+cudb (ODC-By 1.0) + PTB-XL lead II (CC BY 4.0), 13 Oct 2026"
+}

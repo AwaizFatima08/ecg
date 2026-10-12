@@ -10,6 +10,7 @@ import '../models/ecg_result.dart';
 import 'classifier.dart';
 import 'digitizer.dart';
 import 'measure.dart';
+import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
@@ -49,8 +50,9 @@ class EngineException implements Exception {
   String toString() => message;
 }
 
-/// Builds the structured reading from the digitized signal, measurements and classifier output.
-Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<String, double> thr) {
+/// Builds the structured reading from the digitized signal, measurements, classifier output and
+/// (optionally) the lethal-rhythm check. Same logic as validation/engine_e2e.py.
+Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<String, double> thr, [RhythmResult? rhythmCheck]) {
   final bpm = m.rateBpm;
   final regular = m.rrRegular;
   final rconf = bpm != null && regular == true ? 0.8 : (bpm != null ? 0.6 : 0.0);
@@ -74,6 +76,17 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
     }
   }
   final afLike = fired.contains('atrial_fibrillation') || fired.contains('atrial_flutter');
+  // Lethal-rhythm check on the lead II strip: any of VT / VF / asystole is CRITICAL, so the alarm fires on
+  // P(lethal) >= threshold and names the most likely one (the subtype itself is less reliable).
+  if (rhythmCheck != null && rhythmCheck.pLethal >= 0.5) {
+    const codes = {'vt': 'ventricular_tachycardia', 'vf': 'ventricular_fibrillation', 'asystole': 'asystole'};
+    rhythm = {
+      'code': codes[rhythmCheck.lethalClass] ?? 'ventricular_tachycardia',
+      'label': 'Possible VT / VF or asystole (lethal-rhythm check)',
+      'regular': regular,
+      'confidence': rhythmCheck.pLethal.clamp(0.0, 0.95),
+    };
+  }
   if (m.avBlockSuspected && !afLike) {
     findings.add({
       'code': 'second_degree_av_block_mobitz2', 'category': 'conduction', 'leads': ['II'], 'confidence': 0.6,
@@ -140,10 +153,12 @@ class EcgEngine {
 
   Segmenter? _seg;
   Classifier? _clf;
+  RhythmModel? _rhythm;
 
   Future<void> _ensureLoaded() async {
     _seg ??= await Segmenter.load();
     _clf ??= await Classifier.load();
+    _rhythm ??= await RhythmModel.load();
   }
 
   /// Reads one prepared ECG photo (JPEG bytes, long side 1600 px).
@@ -166,7 +181,8 @@ class EcgEngine {
       onStep?.call('Checking for patterns…');
       final x = dm['x'] as List<List<double>>;
       final p = await _clf!.predict(x);
-      reading = buildReading(dm['m'] as Measurements, p, _clf!.thresholds);
+      final rc = await _rhythm!.predict(x[1]);
+      reading = buildReading(dm['m'] as Measurements, p, _clf!.thresholds, rc);
     }
     final ev = evaluateEcg(reading);
     return EcgResult.fromResponse({
