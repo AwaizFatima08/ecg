@@ -37,3 +37,4 @@ validation/.venv/
 *.log
 validation/engines/
 validation/models/
+validation/jobs/homidev_digitize/bundle/
