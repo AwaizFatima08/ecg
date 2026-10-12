@@ -15,6 +15,17 @@ Nothing marked **OPEN** or **ASSUMED** is final until Homi confirms it in writin
 | D8 | Release posture | **OPEN** (recommendation: closed testing first) | |
 | D9 | Phase 0 go/no-go thresholds | **OPEN — after the first Phase 0 run** | |
 
+## Release gates set by Homi (13 Oct 2026)
+- **Accuracy target: as close to 100 % as achievable**, critical patterns first. No reader reaches 100 % (cardiologists
+  disagree on a share of tracings), so the engine is tuned to be conservative: uncertainty escalates or says
+  "review it yourself", never a false all-clear.
+- **No publishing** until the engine's interpretations are reviewed by Homi **and then by at least two cardiologists**.
+- **Reference books** (Hampton: *The ECG Made Easy*, *150 ECG Problems*; Luthra: *ECG Made Easy*; Warren summary) may be
+  used to cross-check criteria and judgement calls (cite book and page). They are all-rights-reserved, so their text and
+  ECG figures are **not** used as training or test data and are not copied into the app or repo.
+- **Training data** (approved): PTB-XL (CC BY 4.0), the Multan *ECG Images dataset of Cardiac Patients* (Ch. Pervaiz Elahi
+  Institute of Cardiology, Mendeley Data, CC BY 4.0) and PhysioNet VT/VF databases (vfdb, cudb).
+
 ## Decisions taken during the build (12 Oct 2026)
 
 - **Build order:** Homi asked for the full build ("build, install, test, debug, prepare final version") and chose

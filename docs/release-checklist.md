@@ -3,6 +3,9 @@
 Work through these **in order**. The app is not releasable until every box in sections A–C is ticked.
 
 ## A. Clinical gates (Homi)
+- [ ] Engine interpretations self-reviewed by Homi (review pages per test set)
+- [ ] Interpretations reviewed independently by **cardiologist 1** and **cardiologist 2**; disagreements resolved and logged
+- [ ] No release before both reviews are complete (Homi, 13 Oct 2026)
 - [ ] Phase 0 run on PTB-XL (`scripts/phase0.sh`) and review page checked against your own reading
 - [ ] CRITICAL sensitivity acceptable for each critical pattern (D9 thresholds set)
 - [ ] False-alert rate on normal ECGs acceptable
