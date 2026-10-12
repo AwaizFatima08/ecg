@@ -6,7 +6,7 @@ Nothing marked **OPEN** or **ASSUMED** is final until Homi confirms it in writin
 | ID | Question | Status | Notes |
 |---|---|---|---|
 | D1 | Anonymous sign-in + daily usage counter for rate limiting | **ASSUMED yes (built)** | Implemented as recommended: `usage/{anonUid}_{yyyymmdd}` = count only, 2-day TTL. Limit 30/day via Remote Config `ecg_daily_limit`. Remove if Homi says no. |
-| D2 | AI provider(s) for Phase 0 | **DECIDED 12 Oct 2026: Claude only** | Model `claude-opus-5-5`, effort `high`. Provider is behind `VisionProvider`, so others can be added later. |
+| D2 | Reading engine | **DECIDED 12 Oct 2026 (revised): own on-device engine, no paid AI** | Homi: the app must stay free and ad-free, and per-reading API costs grow with installs. Claude is not used (no key bought). Engine = photo → signal digitization → measurements + small classifier, on the phone; feeds the same alert rules. The Claude adapter stays in the repo, unused. |
 | D3 | English only for V1 | **ASSUMED (built English only)** | |
 | D4 | Final CRITICAL / URGENT / ABNORMAL lists | **OPEN — Homi** | Starting tables are in `functions/src/rules/alertRules.ts` (all marked proposed). |
 | D5 | Context fields | **ASSUMED (built design 7.3 list)** | Age, sex, complaints (+ ongoing chest pain), BP, HR, SpO₂, conditions. |

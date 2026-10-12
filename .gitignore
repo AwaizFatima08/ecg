@@ -35,3 +35,5 @@ validation/.venv/
 .vscode/
 .DS_Store
 *.log
+validation/engines/
+validation/models/

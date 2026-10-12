@@ -1,0 +1,47 @@
+train 17394  val 2176  test 2103  (held out for Phase 0: 126)
+loaded in 187s
+parameters: 1759751
+epoch  1  loss 0.4009  val macro-AUC 0.8759  (373s)
+epoch  2  loss 0.2878  val macro-AUC 0.9110  (553s)
+epoch  3  loss 0.2533  val macro-AUC 0.9258  (736s)
+epoch  4  loss 0.2364  val macro-AUC 0.9231  (918s)
+epoch  5  loss 0.2190  val macro-AUC 0.9179  (1099s)
+epoch  6  loss 0.2054  val macro-AUC 0.9409  (1280s)
+epoch  7  loss 0.1963  val macro-AUC 0.9364  (1462s)
+epoch  8  loss 0.1870  val macro-AUC 0.9503  (1644s)
+epoch  9  loss 0.1775  val macro-AUC 0.9465  (1826s)
+epoch 10  loss 0.1685  val macro-AUC 0.9530  (2037s)
+epoch 11  loss 0.1602  val macro-AUC 0.9537  (2239s)
+epoch 12  loss 0.1512  val macro-AUC 0.9592  (2424s)
+epoch 13  loss 0.1426  val macro-AUC 0.9587  (2607s)
+epoch 14  loss 0.1349  val macro-AUC 0.9596  (2792s)
+epoch 15  loss 0.1310  val macro-AUC 0.9595  (2976s)
+# Classifier on clean PTB-XL signals (paper 3x4 view), test fold 10
+
+Validation macro-AUC 0.9596. Thresholds set on fold 9 for ≥90% sensitivity.
+
+| label | test positives | AUC | sensitivity @thr | specificity @thr |
+|---|---|---|---|---|
+| st_elevation_injury | 30 | 0.971 | 0.83 | 0.97 |
+| acute_or_recent_mi | 12 | 0.929 | 0.67 | 0.93 |
+| old_mi_q_waves | 372 | 0.933 | 0.87 | 0.83 |
+| st_depression_ischaemia | 220 | 0.948 | 0.85 | 0.90 |
+| t_wave_abnormality | 228 | 0.930 | 0.87 | 0.84 |
+| atrial_fibrillation | 144 | 0.984 | 0.90 | 0.99 |
+| atrial_flutter | 7 | 0.991 | 0.71 | 0.99 |
+| svt | 4 | 0.990 | 0.75 | 0.99 |
+| pvcs | 117 | 0.991 | 0.87 | 0.98 |
+| pacs | 52 | 0.907 | 0.83 | 0.80 |
+| first_degree_av_block | 76 | 0.977 | 0.91 | 0.94 |
+| second_or_third_degree_av_block | 0 | nan | 0.00 | 1.00 |
+| lbbb | 50 | 0.996 | 0.96 | 0.99 |
+| rbbb | 51 | 0.998 | 1.00 | 0.99 |
+| left_anterior_fascicular_block | 154 | 0.986 | 0.88 | 0.97 |
+| nonspecific_ivcd | 75 | 0.742 | 0.84 | 0.38 |
+| wpw_preexcitation | 7 | 0.845 | 0.71 | 1.00 |
+| long_qt | 10 | 0.882 | 0.80 | 0.88 |
+| lvh | 161 | 0.958 | 0.91 | 0.91 |
+| rvh | 11 | 0.977 | 0.64 | 0.98 |
+| paced_rhythm | 28 | 0.958 | 0.79 | 0.98 |
+| low_voltage | 18 | 0.945 | 0.94 | 0.81 |
+| normal | 918 | 0.942 | 0.91 | 0.82 |
