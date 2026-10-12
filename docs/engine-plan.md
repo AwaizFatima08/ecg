@@ -31,6 +31,27 @@ ST-elevation injury 0.97, AF 0.98, LBBB/RBBB ≈1.0, PVCs 0.99, LVH 0.96. Weak: 
 | Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / 50 % | **7 % / 3 %** |
 | Normal → "no critical pattern", scan / photo | 13 % / 0 % | 0 % | **57 % / 47 %** |
 
+**v3** (12 Oct 2026) adds rule-based measurements (`validation/ecg_measure.py`), an AV-block check and a safety net:
+
+| v3, scan / photo | |
+|---|---|
+| Critical → CRITICAL | 78 % / 78 % |
+| Critical → at least URGENT | 92 % / 94 % |
+| Complete heart block → CRITICAL | 71 % / 71 % |
+| Normal → false URGENT/CRITICAL | 10 % / 10 % |
+| Normal → "no critical pattern" | 57 % / 43 % |
+
+Measurements checked against PTB-XL labels on clean signals cut to the 3×4 print (`validation/measure_check.py`):
+QRS ≥ 120 ms in 71 % of bundle branch blocks (1 % of normal ECGs); PR > 200 ms in 69 % of first-degree blocks (6 % of normals);
+left axis in 91 % of LAFB (5 % of normals); QTc ≥ 500 ms in 52 % of long QT, but **also 6 % of normals**. So a long QTc
+is only reported when the long-QT classifier agrees. The AV-block check (more P waves than QRS with a ventricular rate
+under 70) flags 38 % of complete blocks and 2 % of normal ECGs, so it raises **URGENT**, not CRITICAL. In v3 it explains
+the 2 extra normal false alarms (both photos at about 55/min). **Homi to decide** whether a ~2 % URGENT false alarm is an
+acceptable price for the extra heart-block catches. A guard that suppresses the flag when a PR interval is measurable
+removes the false alarms, but also drops heart-block detection from 38 % to 6 %, so it is not used.
+Safety net: if the model is not confident the ECG is normal and no finding passes its cut-off, the engine reports
+"Abnormal-looking ECG without a specific pattern — review it yourself" (ABNORMAL), never a blank result.
+
 **v2** (12 Oct 2026): 4,600 PTB-XL records were rendered (70 % photo look) and digitized on homidev's RTX 5060 Ti in
 2 h 45 min, with 0 failures. The classifier was then fine-tuned on digitized + clean signals, and the cut-offs were set on
 digitized validation data (`validation/results/finetune_digitized.md`). The domain-shift problem is largely solved:
@@ -47,9 +68,9 @@ patterns and long QT indirectly). Not covered by PTB-XL at all: VT/VF, asystole,
 ## Next steps (in order)
 1. ~~Digitized dataset + fine-tune~~: done (v2). Homi approved homidev's GPU for this job (12 Oct 2026);
    the job runs in `~/ecg-engine-job/` only (`validation/jobs/homidev_digitize/`).
-2. Safety net for "abnormal-looking but nothing found": if the classifier's "normal" score is low but no finding
-   passes its cut-off, report at least ABNORMAL with "review the ECG yourself" (fixes the `ptbxl21243` pattern).
-3. AV-dissociation / heart-block detector; interval measurements (PR, QRS, QTc) from the lead II strip.
+2. ~~Safety net~~, ~~AV-block check~~, ~~PR/QRS/QTc/axis measurements~~: done (v3). Still open: early inferior MI
+   `ptbxl08611`, more heart-block data, and rare patterns (VT/VF, hyperkalaemia, Brugada) that PTB-XL lacks.
+3. Homi's clinical review of the v3 review page (`validation/images/review_engine-v3.html`) and of the alert rules.
 4. Phone port (below), then closed testing with doctors.
 
 ## Running it on the phone

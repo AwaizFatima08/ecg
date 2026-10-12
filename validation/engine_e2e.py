@@ -20,6 +20,7 @@ import numpy as np
 import torch
 from scipy.signal import butter, filtfilt, find_peaks
 
+from ecg_measure import measure
 from train_classifier import COLUMN, EcgNet, paper_view
 
 HERE = Path(__file__).resolve().parent
@@ -122,11 +123,16 @@ def main() -> int:
             continue
         with torch.no_grad():
             p = torch.sigmoid(model(torch.from_numpy(paper_view(x[None], None)))).numpy()[0]
-        bpm, rconf, regular = heart_rate(x[1])
+        m = measure(x)
+        bpm = m.get("rate_bpm")
+        regular = m.get("rr_regular")
+        rconf = 0.8 if bpm is not None and regular else (0.6 if bpm is not None else 0.0)
         findings, rhythm = [], None
+        fired = set()
         for k, n in enumerate(labels):
             if n == "normal" or p[k] < thr[n]:
                 continue
+            fired.add(n)
             kind, code, cat, name = MAP[n]
             conf = float(min(0.95, 0.5 + 0.5 * p[k]))
             if kind == "rhythm":
@@ -134,6 +140,21 @@ def main() -> int:
                     rhythm = {"code": code, "label": name, "regular": regular, "confidence": conf}
             else:
                 findings.append({"code": code, "name": name, "leads": [], "category": cat, "confidence": conf})
+        af_like = bool(fired & {"atrial_fibrillation", "atrial_flutter"})
+        # Heart block: more P waves than QRS with a slow ventricular rate (not in AF/flutter). URGENT, not
+        # CRITICAL on its own: 2 % false positives on normal ECGs in the PTB-XL check.
+        if m.get("av_block_suspected") and not af_like:
+            findings.append({"code": "second_degree_av_block_mobitz2", "category": "conduction", "leads": ["II"],
+                             "name": f"Possible high-grade AV block (atrial rate {m.get('atrial_rate_bpm')}, "
+                                     f"ventricular {bpm}/min)", "confidence": 0.6})
+        # QTc: a long value is only trusted when the long-QT classifier agrees (measurement alone over-calls).
+        qtc = m.get("qtc_ms")
+        if qtc is not None and qtc >= 470 and "long_qt" not in fired:
+            qtc = None
+        # Safety net: never a blank result when the model is not confident the ECG is normal.
+        if not findings and rhythm is None and p[labels.index("normal")] < thr["normal"]:
+            findings.append({"code": "other", "category": "other", "leads": [], "confidence": 0.6,
+                             "name": "Abnormal-looking ECG without a specific pattern identified — review it yourself"})
         if rhythm is None:
             code = "sinus_rhythm"
             if bpm is not None and bpm > 100:
@@ -147,10 +168,11 @@ def main() -> int:
             "layout": "12-lead standard",
             "rate_bpm": {"value": bpm, "confidence": rconf},
             "rhythm": rhythm,
-            "intervals": {"pr_ms": None, "qrs_ms": None, "qt_ms": None, "qtc_ms": None},
-            "axis": {"label": "cannot_assess", "confidence": 0},
+            "intervals": {"pr_ms": None if af_like else m.get("pr_ms"), "qrs_ms": m.get("qrs_ms"),
+                          "qt_ms": m.get("qt_ms") if qtc is not None else None, "qtc_ms": qtc},
+            "axis": {"label": m.get("axis_label", "cannot_assess"), "confidence": 0.7 if "axis_label" in m else 0},
             "findings": findings,
-            "model_notes": "On-device engine v0: digitized trace + small classifier. Intervals and axis not yet measured.",
+            "model_notes": "On-device engine: digitized trace, classifier, rule-based intervals/axis and AV-block check.",
         }
         readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
 
