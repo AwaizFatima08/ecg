@@ -56,7 +56,9 @@ SNOMED = {
     "74390002": ["wpw_preexcitation"], "195060002": ["wpw_preexcitation"],
     "111975006": ["long_qt"], "164873001": ["lvh"], "89792004": ["rvh"], "251146004": ["low_voltage"],
 }
-BENIGN = {"426783006", "427393009", "251199005", "251198002", "428417006"}  # SR, sinus irregularity, rotations, early repol
+# Rate-only rhythm statements (sinus brady/tachy, sinus arrhythmia), rotations and early repolarisation do not change the
+# morphology the classifier learns; rate is measured separately. A record with only these (+ SR) counts as "normal".
+BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006"}
 
 
 def arr_label_vector(codes: set[str]) -> np.ndarray | None:
@@ -66,7 +68,7 @@ def arr_label_vector(codes: set[str]) -> np.ndarray | None:
         for lab in SNOMED.get(c, []):
             y[NAMES.index(lab)] = 1.0
             known = True
-    if "426783006" in codes and codes <= BENIGN:
+    if codes and codes <= BENIGN:
         y[NAMES.index("normal")] = 1.0
         known = True
     return y if known else None
@@ -148,7 +150,7 @@ def main() -> int:
     pos = Y[tr].mean(0).clip(1e-4, None)
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev))
     opt = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=1e-2)
-    steps = a.epochs * (tr.sum() // a.batch + 1)
+    steps = int(a.epochs * (int(tr.sum()) // a.batch + 1))
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-3, total_steps=steps)
     rng = np.random.default_rng(0)
     idx_tr = np.where(tr)[0]

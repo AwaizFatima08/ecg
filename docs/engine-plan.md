@@ -31,6 +31,23 @@ ST-elevation injury 0.97, AF 0.98, LBBB/RBBB ≈1.0, PVCs 0.99, LVH 0.96. Weak: 
 | Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / 50 % | **7 % / 3 %** |
 | Normal → "no critical pattern", scan / photo | 13 % / 0 % | 0 % | **57 % / 47 %** |
 
+**v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
+0.897 photo vs teacher 0.977 / 0.906) + 3-seed ensemble of classifiers fine-tuned on student-digitized ECGs
+(digitized-val macro-AUC 0.945) + threshold policy v2 + QRS 0.30:**
+
+| scan / photo | v5 | **v6** |
+|---|---|---|
+| Critical → at least URGENT | 94 % / 92 % | **94 % / 97 %** (photo: 1 miss, `ptbxl21243`) |
+| Critical → CRITICAL | 53 % / 67 % | 64 % / 61 % |
+| Complete heart block → CRITICAL | 21 % / 50 % | 43 % / 43 % |
+| Normal → false URGENT/CRITICAL | 20 % / 20 % | **10 % / 20 %** |
+| Normal → "no critical pattern" | 63 % / 47 % | 57 % / 47 % |
+
+Multan real prints with v6 (teacher digitizer; `results/multan_multan-v6.md`): normal false alarms **16 % → 8 %**, normals
+reading "no critical pattern" 26 % → 34 %; acute-MI prints ≥ URGENT **80 % → 57 %** (CRITICAL 88, URGENT 48, ABNORMAL
+95) — the ensemble is more conservative on real prints; which trade-off is right is for Homi and the cardiologists.
+On-device time with student B: Galaxy A12 **50 s** (was 340 s).
+
 **v5 (13 Oct 2026, phone pipeline = lite digitizer + classifier fine-tuned on lite-digitized ECGs, corrected cut-offs)**
 
 | scan / photo | v4 (broken cut-offs) | **v5 (corrected)** |
