@@ -1,4 +1,5 @@
-// Segmentation U-Net (Open-ECG-Digitizer weights, CC BY-SA 4.0; int8 ONNX) run on the phone.
+// Segmentation U-Net run on the phone: a small student network distilled from the
+// Open-ECG-Digitizer U-Net (CC BY-SA 4.0), fp32 ONNX on the XNNPACK (ARM) execution provider.
 // Port of Segmenter.tiled + segment() in validation/lite_digitizer.py.
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -52,10 +53,15 @@ class Segmenter {
   Segmenter._(this._session);
   final OrtSession _session;
 
-  static Future<Segmenter> load({String asset = 'assets/models/unet_int8.onnx'}) async {
-    final s = await OnnxRuntime().createSessionFromAsset(asset,
-        options: OrtSessionOptions(intraOpNumThreads: 4));
-    return Segmenter._(s);
+  static Future<Segmenter> load({String asset = 'assets/models/unet_student.onnx'}) async {
+    try {
+      return Segmenter._(await OnnxRuntime().createSessionFromAsset(asset,
+          options: OrtSessionOptions(providers: [OrtProvider.XNNPACK, OrtProvider.CPU], intraOpNumThreads: 4)));
+    } catch (_) {
+      // XNNPACK unavailable on this device: plain CPU provider.
+      return Segmenter._(await OnnxRuntime().createSessionFromAsset(asset,
+          options: OrtSessionOptions(intraOpNumThreads: 4)));
+    }
   }
 
   Future<void> close() => _session.close();
@@ -95,7 +101,9 @@ class Segmenter {
         }
         final v = await OrtValue.fromList(input, [1, 3, th, tw]);
         final outs = await _session.run({inName: v});
-        final logits = await outs.values.first.asFlattenedList();
+        final raw = await outs.values.first.asFlattenedList();
+        // Usually arrives as a Float32List; avoid per-element boxing when it does.
+        final logits = raw is Float32List ? raw : Float32List.fromList([for (final v in raw) (v as num).toDouble()]);
         await v.dispose();
         for (final o in outs.values) {
           await o.dispose();
@@ -109,13 +117,13 @@ class Segmenter {
             final gx = x0 + x;
             if (gx >= w) continue;
             final k = y * tw + x;
-            final l0 = (logits[k] as num).toDouble(), l1 = (logits[plane + k] as num).toDouble();
-            final l2 = (logits[2 * plane + k] as num).toDouble(), l3 = (logits[3 * plane + k] as num).toDouble();
+            final l0 = logits[k], l1 = logits[plane + k];
+            final l2 = logits[2 * plane + k], l3 = logits[3 * plane + k];
             final m = math.max(math.max(l0, l1), math.max(l2, l3));
             final e0 = math.exp(l0 - m), e1 = math.exp(l1 - m), e2 = math.exp(l2 - m), e3 = math.exp(l3 - m);
             final s = e0 + e1 + e2 + e3;
-            sig.d[gy * w + gx] = [e0, e1, e2, e3][_signalClass] / s;
-            grid.d[gy * w + gx] = [e0, e1, e2, e3][_gridClass] / s;
+            sig.d[gy * w + gx] = (_signalClass == 2 ? e2 : e0) / s;
+            grid.d[gy * w + gx] = (_gridClass == 0 ? e0 : e2) / s;
           }
         }
       }

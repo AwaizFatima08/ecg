@@ -38,7 +38,7 @@ GRID_CLASS, SIGNAL_CLASS = 0, 2
 class Segmenter:
     """U-Net wrapper: PyTorch (reference) or ONNX Runtime (what the phone runs)."""
 
-    def __init__(self, onnx: Path | None = None):
+    def __init__(self, onnx: Path | None = None, student: Path | None = None):
         self.onnx = None
         if onnx:
             import onnxruntime as ort
@@ -48,8 +48,13 @@ class Segmenter:
             sys.path.insert(0, str(DIGI))
             from src.model.unet import UNet
             self.torch = torch
-            self.net = UNet(num_in_channels=3, num_out_channels=4, dims=[32, 64, 128, 256, 320, 320, 320, 320], depth=2)
-            sd = torch.load(DIGI / "weights" / "unet_weights_07072025.pt", map_location="cpu", weights_only=False)
+            if student:  # distilled small U-Net (jobs/homidev_digitize/distill_unet.py)
+                ck = torch.load(student, map_location="cpu", weights_only=False)
+                self.net = UNet(num_in_channels=3, num_out_channels=4, dims=ck["dims"], depth=ck["depth"])
+                sd = ck["state_dict"]
+            else:
+                self.net = UNet(num_in_channels=3, num_out_channels=4, dims=[32, 64, 128, 256, 320, 320, 320, 320], depth=2)
+                sd = torch.load(DIGI / "weights" / "unet_weights_07072025.pt", map_location="cpu", weights_only=False)
             sd = sd.get("state_dict", sd) if isinstance(sd, dict) else sd
             sd = {k.replace("_orig_mod.", "").replace("module.", ""): v for k, v in sd.items()}
             self.net.load_state_dict(sd)
@@ -282,12 +287,13 @@ def main() -> int:
     ap.add_argument("out", type=Path)
     ap.add_argument("--size", type=int, default=1280)
     ap.add_argument("--onnx", type=Path)
+    ap.add_argument("--student", type=Path, help="distilled student checkpoint (.pt)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--tile", type=int, default=0, help="tile size (multiple of 128); 0 = whole image")
     ap.add_argument("--shard", default="0/1", help="i/n: process every n-th file starting at i")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    seg = Segmenter(a.onnx)
+    seg = Segmenter(a.onnx, a.student)
     files = sorted(p for p in a.images.glob("*.jpg"))
     if a.limit:
         files = files[:a.limit]

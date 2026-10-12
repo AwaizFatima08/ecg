@@ -94,15 +94,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="engine-v0")
     ap.add_argument("--digitized", type=Path, default=HERE / "engines" / "out")
-    ap.add_argument("--model", type=Path, default=HERE / "models" / "ecgnet.pt")
+    ap.add_argument("--model", default=str(HERE / "models" / "ecgnet.pt"), help="checkpoint, or comma-separated list for an ensemble")
     ap.add_argument("--meta", type=Path, default=HERE / "models" / "ecgnet_meta.json")
     a = ap.parse_args()
 
-    ck = torch.load(a.model, map_location="cpu")
     meta = json.load(open(a.meta))
-    model = EcgNet(len(ck["labels"]), ck["width"])
-    model.load_state_dict(ck["state_dict"])
-    model.eval()
+    models = []
+    for mp in str(a.model).split(","):  # comma-separated list = ensemble (mean probability)
+        ck = torch.load(mp, map_location="cpu")
+        m_ = EcgNet(len(ck["labels"]), ck["width"])
+        m_.load_state_dict(ck["state_dict"])
+        models.append(m_.eval())
     labels, thr = ck["labels"], meta["thresholds"]
 
     readings = []
@@ -122,7 +124,8 @@ def main() -> int:
             readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
             continue
         with torch.no_grad():
-            p = torch.sigmoid(model(torch.from_numpy(paper_view(x[None], None)))).numpy()[0]
+            xin = torch.from_numpy(paper_view(x[None], None))
+            p = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in models], 0)
         m = measure(x)
         bpm = m.get("rate_bpm")
         regular = m.get("rr_regular")

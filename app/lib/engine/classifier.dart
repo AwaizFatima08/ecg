@@ -32,35 +32,49 @@ Float32List paperView(List<List<double>> x) {
   return out;
 }
 
+/// One or more classifiers (an ensemble listed in ecgnet_meta.json under "models"); their
+/// probabilities are averaged and compared with the ensemble's own thresholds.
 class Classifier {
-  Classifier._(this._session, this.labels, this.thresholds);
-  final OrtSession _session;
+  Classifier._(this._sessions, this.labels, this.thresholds);
+  final List<OrtSession> _sessions;
   final List<String> labels;
   final Map<String, double> thresholds;
 
   static Future<Classifier> load() async {
-    final s = await OnnxRuntime().createSessionFromAsset('assets/models/ecgnet.onnx');
     final meta = jsonDecode(await rootBundle.loadString('assets/models/ecgnet_meta.json')) as Map<String, dynamic>;
+    final files = (meta['models'] as List?)?.cast<String>() ?? const ['ecgnet.onnx'];
+    final sessions = [
+      for (final f in files) await OnnxRuntime().createSessionFromAsset('assets/models/$f'),
+    ];
     return Classifier._(
-      s,
+      sessions,
       (meta['labels'] as List).cast<String>(),
       (meta['thresholds'] as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
     );
   }
 
-  Future<void> close() => _session.close();
-
-  /// Probability per label.
-  Future<Map<String, double>> predict(List<List<double>> x) async {
-    final v = await OrtValue.fromList(paperView(x), [1, 13, 1000]);
-    final outs = await _session.run({_session.inputNames.first: v});
-    final logits = await outs.values.first.asFlattenedList();
-    await v.dispose();
-    for (final o in outs.values) {
-      await o.dispose();
+  Future<void> close() async {
+    for (final s in _sessions) {
+      await s.close();
     }
-    return {
-      for (var k = 0; k < labels.length; k++) labels[k]: 1 / (1 + math.exp(-(logits[k] as num).toDouble())),
-    };
+  }
+
+  /// Probability per label (mean over the ensemble).
+  Future<Map<String, double>> predict(List<List<double>> x) async {
+    final input = paperView(x);
+    final sum = List<double>.filled(labels.length, 0);
+    for (final s in _sessions) {
+      final v = await OrtValue.fromList(input, [1, 13, 1000]);
+      final outs = await s.run({s.inputNames.first: v});
+      final logits = await outs.values.first.asFlattenedList();
+      await v.dispose();
+      for (final o in outs.values) {
+        await o.dispose();
+      }
+      for (var k = 0; k < labels.length; k++) {
+        sum[k] += 1 / (1 + math.exp(-(logits[k] as num).toDouble()));
+      }
+    }
+    return {for (var k = 0; k < labels.length; k++) labels[k]: sum[k] / _sessions.length};
   }
 }

@@ -30,6 +30,8 @@ HERE = Path(__file__).resolve().parent
 WORK, OUT = HERE / "work", HERE / "out"
 DIGI_DIR = HERE / os.environ.get("DIGITIZED_DIR", "work/digitized")
 TAG = os.environ.get("OUT_TAG", "digitized")
+SEED = int(os.environ.get("SEED", "1"))
+EPOCHS = int(os.environ.get("EPOCHS", "25"))
 HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "st_depression_ischaemia", "atrial_fibrillation",
              "atrial_flutter", "svt", "second_or_third_degree_av_block", "long_qt", "wpw_preexcitation"}
 DROP = {"nonspecific_ivcd"}
@@ -106,8 +108,9 @@ def main() -> int:
     pos = Yt.mean(0).clip(1e-3, None)
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev))
     opt = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-2)
-    rng = np.random.default_rng(1)
-    epochs, half = 25, 32
+    rng = np.random.default_rng(SEED)
+    torch.manual_seed(SEED)
+    epochs, half = EPOCHS, 32
 
     def predict(X):
         model.eval(); out = []

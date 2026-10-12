@@ -13,7 +13,7 @@ import 'measure.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v3 (2026-10-12)';
+const engineVersion = 'on-device engine v4 (2026-10-12)';
 const rulesVersion = '2026-10-12.1-proposed';
 
 /// Classifier label -> (kind, finding/rhythm code, category, display name). Same table as engine_e2e.MAP.

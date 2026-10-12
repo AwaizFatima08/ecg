@@ -8,11 +8,11 @@ echo "== $(date '+%F %T') lite job start"
 USED=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
 if [ "$USED" -gt 1500 ]; then echo "GPU busy: ${USED} MiB. Not starting."; exit 3; fi
 PY=$PWD/.venv/bin/python
-echo "== lite digitize (4 workers)"
-for i in 0 1 2 3; do
-  $PY lite_digitizer.py work/images work/digitized_lite --size 1600 --shard $i/4 > out/lite_w$i.log 2>&1 &
+echo "== lite digitize (resumable; 2 workers)"
+for i in 0 3; do  # 2 workers: 4 x 5.8 GB does not fit in 16 GB
+  $PY lite_digitizer.py work/images work/digitized_lite --size 1600 --shard $i/4 >> out/lite_w$i.log 2>&1 &
 done
-wait
+wait $(jobs -p)  # only the workers: a bare "wait" also waits for the tee process substitution and never returns
 echo "digitized: $(ls work/digitized_lite/*_timeseries_canonical.csv | wc -l)"; grep -h FAIL out/lite_w*.log | head -20 || true
 echo "== fine-tune on lite signals"
 DIGITIZED_DIR=work/digitized_lite OUT_TAG=lite $PY finetune_digitized.py
