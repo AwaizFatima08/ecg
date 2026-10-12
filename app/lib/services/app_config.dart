@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/env.dart';
 import '../firebase_options.dart';
+import '../firebase_options_demo.dart';
 
 /// Start-up, Remote Config (kill switch, minimum version, disclaimer version)
 /// and the only thing the app stores locally: which disclaimer version the
@@ -31,7 +32,10 @@ class AppConfig {
   bool get disclaimerAccepted => acceptedDisclaimer >= disclaimerVersion;
 
   Future<void> init() async {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    // The emulator runs as the offline "demo-" project; everything else uses the real project.
+    await Firebase.initializeApp(
+      options: Env.useEmulator ? DemoFirebaseOptions.currentPlatform : DefaultFirebaseOptions.currentPlatform,
+    );
 
     if (Env.useEmulator) {
       FirebaseFunctions.instanceFor(region: Env.functionsRegion).useFunctionsEmulator(Env.emulatorHost, 5001);
