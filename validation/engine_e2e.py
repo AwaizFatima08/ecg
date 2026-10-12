@@ -163,9 +163,14 @@ def main() -> int:
         # Heart block: more P waves than QRS with a slow ventricular rate (not in AF/flutter). URGENT, not
         # CRITICAL on its own: 2 % false positives on normal ECGs in the PTB-XL check.
         if m.get("av_block_suspected") and not af_like:
-            findings.append({"code": "second_degree_av_block_mobitz2", "category": "conduction", "leads": ["II"],
-                             "name": f"Possible high-grade AV block (atrial rate {m.get('atrial_rate_bpm')}, "
-                                     f"ventricular {bpm}/min)", "confidence": 0.6})
+            # [PROPOSED, Homi to confirm] with a slow ventricular rate (< 55) the block is likely high-grade/complete
+            # -> CRITICAL; PTB-XL check: 25 % of complete blocks, 0.2 % of normals, 3.3 % of sinus bradycardias.
+            slow = bpm is not None and bpm < 55
+            findings.append({"code": "high_grade_av_block" if slow else "second_degree_av_block_mobitz2",
+                             "category": "conduction", "leads": ["II"],
+                             "name": f"Possible {'high-grade / complete' if slow else 'second-degree'} AV block "
+                                     f"(atrial rate {m.get('atrial_rate_bpm')}, ventricular {bpm}/min)",
+                             "confidence": 0.6})
         # QTc: a long value is only trusted when the long-QT classifier agrees (measurement alone over-calls).
         qtc = m.get("qtc_ms")
         if qtc is not None and qtc >= 470 and "long_qt" not in fired:

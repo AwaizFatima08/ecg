@@ -32,9 +32,7 @@ DIGI_DIR = HERE / os.environ.get("DIGITIZED_DIR", "work/digitized")
 TAG = os.environ.get("OUT_TAG", "digitized")
 SEED = int(os.environ.get("SEED", "1"))
 EPOCHS = int(os.environ.get("EPOCHS", "25"))
-HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "st_depression_ischaemia", "atrial_fibrillation",
-             "atrial_flutter", "svt", "second_or_third_degree_av_block", "long_qt", "wpw_preexcitation"}
-DROP = {"nonspecific_ivcd"}
+from threshold_policy import DROP, thresholds as policy_thresholds  # noqa: E402
 
 
 def load_digitized(f: Path) -> np.ndarray | None:
@@ -57,20 +55,7 @@ def load_digitized(f: Path) -> np.ndarray | None:
 
 
 def thresholds(names, Y, P, old):
-    thr = {}
-    for k, n in enumerate(names):
-        y, p = Y[:, k], P[:, k]
-        if n in DROP:
-            thr[n] = 2.0
-        elif y.sum() < 5:
-            thr[n] = old.get(n, 0.5)
-        elif n in HIGH_SENS:
-            s = np.sort(p[y == 1]); thr[n] = float(s[int(0.1 * len(s))])
-        else:
-            cands = np.unique(p)
-            thr[n] = float(max(cands, key=lambda t: ((p >= t) & (y == 1)).sum() / y.sum()
-                               + ((p < t) & (y == 0)).sum() / (y == 0).sum()))
-    return thr
+    return policy_thresholds(names, Y, P)
 
 
 def main() -> int:

@@ -88,9 +88,13 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
     };
   }
   if (m.avBlockSuspected && !afLike) {
+    // [PROPOSED, Homi to confirm] a slow ventricular rate (< 55) makes a high-grade/complete block likely -> CRITICAL.
+    final slow = bpm != null && bpm < 55;
     findings.add({
-      'code': 'second_degree_av_block_mobitz2', 'category': 'conduction', 'leads': ['II'], 'confidence': 0.6,
-      'name': 'Possible high-grade AV block (atrial rate ${m.atrialRateBpm}, ventricular $bpm/min)',
+      'code': slow ? 'high_grade_av_block' : 'second_degree_av_block_mobitz2',
+      'category': 'conduction', 'leads': ['II'], 'confidence': 0.6,
+      'name': 'Possible ${slow ? 'high-grade / complete' : 'second-degree'} AV block '
+          '(atrial rate ${m.atrialRateBpm}, ventricular $bpm/min)',
     });
   }
   var qtc = m.qtcMs;

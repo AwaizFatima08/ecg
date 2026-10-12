@@ -31,6 +31,31 @@ ST-elevation injury 0.97, AF 0.98, LBBB/RBBB ≈1.0, PVCs 0.99, LVH 0.96. Weak: 
 | Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / 50 % | **7 % / 3 %** |
 | Normal → "no critical pattern", scan / photo | 13 % / 0 % | 0 % | **57 % / 47 %** |
 
+**v5 (13 Oct 2026, phone pipeline = lite digitizer + classifier fine-tuned on lite-digitized ECGs, corrected cut-offs)**
+
+| scan / photo | v4 (broken cut-offs) | **v5 (corrected)** |
+|---|---|---|
+| Critical → CRITICAL | 81 % / 83 % | 53 % / 67 % |
+| Critical → at least URGENT | 94 % / 92 % | **94 % / 92 %** |
+| Complete heart block → CRITICAL | 71 % / 79 % | 21 % / 50 % |
+| ST-elevation injury → CRITICAL | 83 % / 83 % | 78 % / 83 % |
+| Normal → false URGENT/CRITICAL | 20 % / 23 % | 20 % / 20 % |
+
+**A calibration bug was found and fixed (13 Oct 2026):** labels with very few validation examples (WPW 7, flutter 7,
+long QT 11, acute MI 1) got near-zero cut-offs from the "≥ 90 % sensitivity" rule, so e.g. WPW fired on almost every
+ECG. Through the AF+WPW rule (M3) this produced spurious CRITICAL alerts — including most of v4's apparent heart-block
+"catches". `validation/threshold_policy.py` (v2) fixes rare labels at 0.3 and floors all cut-offs at 0.05. The v5 numbers are
+the honest ones. Remaining false alarms on normals are mostly `st_depression` (4/30 per variant) and `long_qt`.
+
+**Real paper prints (Multan dataset, teacher digitizer, partial, 282 of 928):** acute-MI prints ≥ URGENT 73 % (21/49
+CRITICAL); "abnormal heartbeat" prints ≥ ABNORMAL 96 %; normal prints not yet scored.
+
+**Heart block is the weak point.** PTB-XL has 16 complete and 14 second-degree blocks, far too few to learn from.
+The rule-based AV-block check reaches URGENT on most of them (9/14 scans); a slow-rate escalation to CRITICAL
+(rate < 55: 25 % of complete blocks, 0.2 % of normals, 3.3 % of sinus bradycardias on clean PTB-XL) is implemented as
+**[PROPOSED]** and makes no difference on the digitized Phase 0 set. Next: train on the PhysioNet/CinC Challenge 2021
+12-lead data (≈ 88 k ECGs incl. hundreds of complete heart blocks, WPW and long QT) — see "Next steps".
+
 **v3** (12 Oct 2026) adds rule-based measurements (`validation/ecg_measure.py`), an AV-block check and a safety net:
 
 | v3, scan / photo | |
@@ -70,7 +95,9 @@ patterns and long QT indirectly). Not covered by PTB-XL at all: VT/VF, asystole,
    the job runs in `~/ecg-engine-job/` only (`validation/jobs/homidev_digitize/`).
 2. ~~Safety net~~, ~~AV-block check~~, ~~PR/QRS/QTc/axis measurements~~: done (v3). Still open: early inferior MI
    `ptbxl08611`, more heart-block data, and rare patterns (VT/VF, hyperkalaemia, Brugada) that PTB-XL lacks.
-3. Homi's clinical review of the v3 review page (`validation/images/review_engine-v3.html`) and of the alert rules.
+3. Challenge-2021 training round (CPSC, Georgia, Chapman-Shaoxing, Ningbo, PTB-XL; licence to be confirmed per
+   source) for the rare critical classes; keep Phase 0 untouched, select on the 200-record selection set.
+4. Homi's clinical review of the v5 review page (`validation/images/review_engine-v3.html`) and of the alert rules.
 4. Phone port (below), then closed testing with doctors.
 
 ## Running it on the phone
