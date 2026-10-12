@@ -1,3 +1,5 @@
+> **Superseded:** the live policy is https://medicalapps.homilabs.org/ecg-reader/privacy/ (source: `/mnt/storage/projects/medicalapps_site/tools/build_pages.py`). Edit it there.
+
 # ECG Reader — Privacy Policy (DRAFT for Homi's review)
 
 *HomiLabs · last updated: 12 October 2026*

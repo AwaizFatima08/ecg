@@ -11,13 +11,14 @@ Work through these **in order**. The app is not releasable until every box in se
 - [ ] Optional: real de-identified ECG photos after the hospital policy check (D6)
 
 ## B. Firebase / backend (one time)
-- [ ] Free a Google Cloud project slot (delete an unused project) or request a quota increase, then create the project (e.g. `ecg-reader-homilabs`)
-- [ ] Upgrade it to **Blaze**, then set a **budget alert**
-- [ ] `firebase use --add` → put the project id in `.firebaserc`
+- [x] Firebase project `ecg-reader-homilabs` created (12 Oct 2026; Analytics and Gemini off)
+- [x] Blaze plan + budget (done by Homi, 12 Oct 2026)
+- [x] `.firebaserc` default = `ecg-reader-homilabs`
 - [ ] Anthropic key: set a **monthly spend limit** in the Anthropic console, then `firebase functions:secrets:set ANTHROPIC_API_KEY`
 - [ ] Check the Anthropic API data-retention setting for the organisation and use the strictest option (design 3.5)
-- [ ] Enable **Anonymous** sign-in (Authentication → Sign-in method)
-- [ ] Create Firestore (Native mode, region `asia-south1`) and add a **TTL policy** on collection `usage`, field `expireAt`
+- [x] Anonymous sign-in enabled, auto clean-up after 30 days
+- [x] Firestore created (asia-south1, production rules deployed)
+- [ ] Add a **TTL policy** on collection `usage`, field `expireAt`
 - [ ] App Check: register the Android app with **Play Integrity**; add the SHA-256 of the app signing key (Play Console) and of the upload key:
       `eb:29:50:a9:53:94:e8:76:af:fb:ea:84:43:2d:ea:6a:2e:00:4e:8c:f2:90:95:0f:e6:b6:25:ac:af:33:cd:12`
 - [ ] Register a **debug token** for each test phone (App Check → Manage debug tokens)
@@ -27,9 +28,9 @@ Work through these **in order**. The app is not releasable until every box in se
 - [ ] Confirm in Cloud Logging that only metadata is logged (no image, no reading, no ids)
 
 ## C. App
-- [ ] `cd app && flutterfire configure --project=<id> --platforms=android` (replaces the placeholder `lib/firebase_options.dart`, adds `google-services.json`)
+- [x] `flutterfire configure` done (Android app registered)
 - [ ] Add Crashlytics (analytics off) now that the real project exists
-- [ ] Host the privacy policy (`docs/privacy-policy.md`) and pass its URL with `--dart-define=PRIVACY_URL=...` (default `https://homilabs.org/ecg-reader/privacy`)
+- [x] Privacy policy hosted at https://medicalapps.homilabs.org/ecg-reader/privacy/ (app default; source in /mnt/storage/projects/medicalapps_site)
 - [ ] Final app name (D7) and icon
 - [ ] Bump `version:` in `app/pubspec.yaml`
 - [ ] `flutter build appbundle --release`

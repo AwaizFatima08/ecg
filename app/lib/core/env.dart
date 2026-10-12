@@ -12,5 +12,5 @@ class Env {
   static const functionsRegion = 'asia-south1';
 
   /// Shown on the About screen.
-  static const privacyUrl = String.fromEnvironment('PRIVACY_URL', defaultValue: 'https://homilabs.org/ecg-reader/privacy');
+  static const privacyUrl = String.fromEnvironment('PRIVACY_URL', defaultValue: 'https://medicalapps.homilabs.org/ecg-reader/privacy/');
 }
