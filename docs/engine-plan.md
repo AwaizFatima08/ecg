@@ -55,7 +55,17 @@ v7 is the more sensitive operating point (recommended for the critical-first goa
 **v7b** = v7 with the ST-depression cut-off set by Youden's J instead of the ≥ 90 %-sensitivity rule (threshold policy v3
 candidate, `models/v2/ensemble2_meta_v3.json`): every critical number is unchanged, false alarms on normals fall to 7 %
 (Phase 0 scans) and 15 % (Multan), because 48 of v7's 54 Multan false alarms were ST depression alone. This choice was
-confirmed on the test sets, so it needs re-confirmation by the cardiologists' review. **v7b is the recommended build.** Both ensembles
+confirmed on the test sets, so it needs re-confirmation by the cardiologists' review. **v7c** (3 seeds + policy v3, `models/v2/ensemble3_meta_v3.json`, digitized-val macro-AUC 0.947) — **the build now in the app**:
+
+| | Phase 0 scan / photo | Multan real prints (student-digitized) |
+|---|---|---|
+| Critical → CRITICAL | **83 % / 78 %** | acute MI ≥ URGENT **90 %** (191/239 CRITICAL) |
+| Critical → at least URGENT | 97 % / 94 % | history of MI ≥ ABNORMAL 100 %, abnormal heartbeat 97 % |
+| Complete heart block → CRITICAL | **79 % / 71 %** | — |
+| Normal → false URGENT/CRITICAL | **7 % / 10 %** | **6 %** (18/284) |
+| Normal → "no critical pattern" | 60 % / 33 % | 8 % (85 % land in ABNORMAL — the remaining weakness) |
+
+Still missed below URGENT on Phase 0: `ptbxl21243` (both variants) and `ptbxl07835` (photo). Both ensembles
 are kept (`validation/models/student`, `validation/models/v2`). Which to ship is Homi's and the cardiologists' call.
 
 **v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
