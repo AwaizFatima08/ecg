@@ -101,6 +101,28 @@ tachycardia on a 111/min sinus tachycardia, and its MI is a genuine classifier m
 regular P waves for that flag was tried and rejected: it removes the false alarms but drops complete-heart-block
 detection from 56 % to 6 % (`measure_check.py`), because the P-wave stream after QRS-T subtraction is too noisy.
 
+**Digitizer time-axis fixes (13 Oct 2026, afternoon; v7e/v7g, Python + Dart, parity on 5 images):** chasing the two
+Phase 0 misses showed that the *time axis* of digitized traces was often wrong, which the per-lead correlation score
+(computed after alignment in the old eval) had hidden. New check `validation/lag_check.py` (best lag of lead II and of
+the 3×4 leads against the clean signal): before, only 68 % of rhythm strips and 63 % of leads were within 40 ms;
+12 % of strips were ≥ 300 ms off; unaligned median r 0.65. Causes and fixes:
+1. *Rhythm-strip end* was found with a threshold scaled to the tallest complex, so a flat tail (or any strip with
+   very tall complexes, e.g. `ptbxl21243`) was cut short and the whole 10 s axis shifted (0.35 s on 21243). Threshold is
+   now absolute (`> max(0.5, 2 % of max)`). Alone (v7e): scan traces with r ≥ 0.9 78 → 94 %, photo 41 → 48 %.
+2. *Rows aligned to the strip by rounding to whole 5 mm squares* put entire rows 0.2 s off on photos (`ptbxl00959`,
+   `00201`, `07835`, `01946`…). The strip's major grid lines are now **tracked upward slab by slab** through the grid map
+   (a few px of tilt/keystone per slab, never a whole square), and each row's pixel→mm ruler is fitted to the tracked
+   lines, so every row shares the strip's origin. Line profiles use the central 40 % of a band (tilted lines smear
+   less). Result (v7g): 99 % of strips and 98 % of leads within 40 ms; unaligned median r 0.92 (scan 0.96 / photo 0.90).
+   Tried and rejected: a comb-walk line finder (+1 sample bias on scans) and taking the column extremum instead of the
+   centroid for steep strokes (restores R/S amplitude but lowers r).
+3. Phase 0 tiers with the **unchanged** classifier (fine-tuned on the old, shifted traces): scan identical to v7d except
+   `ptbxl11500` (complete block) URGENT → CRITICAL; photo moves both ways (3 critical records drop to ABNORMAL:
+   `04827`, `08611`, `08624`; `10108`, `11500`, `18840` rise to CRITICAL). The classifier must be re-fine-tuned on
+   correctly digitized traces before judging — that is the next homidev job (re-digitize the 4,600-record fine-tune set,
+   the selection set and Multan with the fixed digitizer, re-fine-tune the 3 seeds, re-tune thresholds, re-export).
+   `ptbxl00959_photo` (complete heart block) now digitizes at median lead r 0.84 (was 0.16).
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 

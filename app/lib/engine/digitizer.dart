@@ -142,8 +142,8 @@ double gridPeriod(Map2D grid, double prior) {
   return ests.isEmpty ? prior : median(ests);
 }
 
-/// Quadratic pixel->mm map from the 5 mm major grid lines in a band profile (null if not found).
-List<double>? ruler(List<double> profile, double ppm) {
+/// Pixel positions of the 5 mm major vertical lines in a band profile and their median spacing (null if not found).
+(List<int>, double)? gridLines(List<double> profile, double ppm) {
   final n = math.max(3, (10 * ppm).toInt());
   final ma = movingAverageSame(profile, n);
   final p = [for (var i = 0; i < profile.length; i++) profile[i] - ma[i]];
@@ -151,14 +151,12 @@ List<double>? ruler(List<double> profile, double ppm) {
   if (pk.length < 6) return null;
   final step = median([for (var i = 1; i < pk.length; i++) (pk[i] - pk[i - 1]).toDouble()]);
   if (!(3.5 * ppm < step && step < 6.5 * ppm)) return null;
-  final idx = <int>[0], xs = <double>[pk[0].toDouble()];
-  for (final q in pk.skip(1)) {
-    final k = pyRound((q - xs.last) / step);
-    if (k < 1) continue;
-    idx.add(idx.last + k);
-    xs.add(q.toDouble());
-  }
-  final mm = [for (final i in idx) 5.0 * i];
+  return (pk, step);
+}
+
+/// Quadratic fit with one outlier-rejection pass (lite_digitizer.ruler_from_lines).
+List<double>? rulerFromLines(List<double> xs, List<double> mm) {
+  if (xs.length < 6) return null;
   var c = polyfit2(xs, mm);
   final keepX = <double>[], keepY = <double>[];
   for (var i = 0; i < xs.length; i++) {
@@ -170,6 +168,90 @@ List<double>? ruler(List<double> profile, double ppm) {
   if (keepX.length >= 6) c = polyfit2(keepX, keepY);
   return c;
 }
+
+/// Ruler plus the (xs, mm) lines it was fitted on: lines numbered step by step from the first one.
+(List<double>, List<double>, List<double>)? rulerLines(List<double> profile, double ppm) {
+  final g = gridLines(profile, ppm);
+  if (g == null) return null;
+  final (pk, step) = g;
+  final idx = <int>[0], xs = <double>[pk[0].toDouble()];
+  for (final q in pk.skip(1)) {
+    final k = pyRound((q - xs.last) / step);
+    if (k < 1) continue;
+    idx.add(idx.last + k);
+    xs.add(q.toDouble());
+  }
+  final mm = [for (final i in idx) 5.0 * i];
+  final c = rulerFromLines(xs, mm);
+  return c == null ? null : (c, xs, mm);
+}
+
+/// Quadratic pixel->mm map from the 5 mm major grid lines in a band profile (null if not found).
+List<double>? ruler(List<double> profile, double ppm) => rulerLines(profile, ppm)?.$1;
+
+/// Follows the rhythm strip's major lines upward through the grid map in thin slabs, so a tilted or keystoned
+/// photo cannot swap a line for its neighbour (lite_digitizer.track_lines). Returns (slab centre y, xs, mm) per slab.
+List<(int, List<double>, List<double>)> trackLines(
+    Map2D grid, double ppm, List<double> xs0, List<double> mm0, int yFrom, int yTo) {
+  final slabPx = math.max(8, (4 * ppm).toInt());
+  final step = 5.0 * ppm;
+  final cur = <double, double>{for (var i = 0; i < xs0.length; i++) mm0[i]: xs0[i]};
+  final miss = <double, int>{for (final m in mm0) m: 0};
+  final out = <(int, List<double>, List<double>)>[];
+  var y = yFrom;
+  final n = math.max(3, (10 * ppm).toInt());
+  while (y - slabPx >= yTo) {
+    final prof = grid.colSums(y - slabPx, y);
+    final ma = movingAverageSame(prof, n);
+    final p = [for (var i = 0; i < prof.length; i++) prof[i] - ma[i]];
+    final pk = findPeaks(p, distance: math.max(2, (3.5 * ppm).toInt()), prominence: math.max(1e-6, 0.15 * std(p)));
+    if (pk.isNotEmpty) {
+      final keys = cur.keys.toList();
+      final pos = [for (final k in keys) cur[k]!];
+      var d0 = 0.0, best = -1;
+      for (var d = -0.25 * step; d <= 0.25 * step + 0.5; d += 1.0) {
+        var sc = 0;
+        for (final x in pos) {
+          var dist = double.infinity;
+          for (final q in pk) {
+            final dd = (q - (x + d)).abs();
+            if (dd < dist) dist = dd;
+          }
+          if (dist < 0.15 * step) sc++;
+        }
+        if (sc > best) {
+          best = sc;
+          d0 = d;
+        }
+      }
+      for (var i = 0; i < keys.length; i++) {
+        final k = keys[i], x = pos[i];
+        var j = 0;
+        for (var q = 1; q < pk.length; q++) {
+          if ((pk[q] - (x + d0)).abs() < (pk[j] - (x + d0)).abs()) j = q;
+        }
+        if ((pk[j] - (x + d0)).abs() < 0.25 * step) {
+          cur[k] = pk[j].toDouble();
+          miss[k] = 0;
+        } else {
+          cur[k] = x + d0;
+          miss[k] = miss[k]! + 1;
+        }
+      }
+    }
+    for (final k in miss.keys.where((k) => miss[k]! > 6).toList()) {
+      cur.remove(k);
+      miss.remove(k);
+    }
+    y -= slabPx;
+    final ks = cur.keys.toList()..sort((a, b) => cur[a]!.compareTo(cur[b]!));
+    out.add((y + slabPx ~/ 2, [for (final k in ks) cur[k]!], ks));
+  }
+  return out;
+}
+
+/// Fraction of a band's height trimmed top and bottom for vertical-line profiles (tilted lines smear less).
+const slab = 0.3;
 
 DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   final info = <String, Object?>{};
@@ -200,15 +282,39 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   final totalPx = 250 * ppm;
   final rb = sig.colSums(bounds[3], bounds[4]);
   final rbMax = rb.reduce(math.max);
-  final on = [for (var x = 0; x < rb.length; x++) if (rb[x] > rbMax * 0.08) x];
+  // Threshold must not scale with the tallest complex: a flat tail is only trace-thickness high (see lite_digitizer.py).
+  final on = [for (var x = 0; x < rb.length; x++) if (rb[x] > math.max(0.5, rbMax * 0.02)) x];
   if (on.length < 10) return DigitizeResult(null, info, 'rhythm strip not found');
   final x1Glob = on.last;
   final x0Glob = math.max(0, pyRound(x1Glob - totalPx));
   info['x_range'] = [x0Glob, x1Glob];
-  final r = ruler(grid.colSums(bounds[3], bounds[4]), ppm);
+  List<double> vprof(int a, int b) => grid.colSums(a + ((b - a) * slab).toInt(), b - ((b - a) * slab).toInt());
+  final rl = rulerLines(vprof(bounds[3], bounds[4]), ppm);
+  final r = rl?.$1;
   final endMmR = r == null ? null : polyval(r, x1Glob.toDouble());
   info['ruler'] = r != null;
   final xc = (x0Glob + x1Glob) / 2;
+  // Row rulers chained upward from the rhythm strip so every row shares its mm origin (see lite_digitizer.py).
+  final chain = <int, List<double>>{};
+  if (rl != null) {
+    final tr = trackLines(grid, ppm, rl.$2, rl.$3, (bounds[3] + bounds[4]) ~/ 2, 0);
+    for (final row in [2, 1, 0]) {
+      final ycRow = (bounds[row] + bounds[row + 1]) / 2;
+      final half = (bounds[row + 1] - bounds[row]) * (0.5 - slab);
+      final xs = <double>[], mm = <double>[];
+      for (final (yy, xs_, mm_) in tr) {
+        if ((yy - ycRow).abs() < half) {
+          xs.addAll(xs_);
+          mm.addAll(mm_);
+        }
+      }
+      if (xs.length < 6) break;
+      final c = rulerFromLines(xs, mm);
+      if (c == null) break;
+      chain[row] = c;
+    }
+  }
+  info['chained_rows'] = chain.keys.toList()..sort();
   final ti = [for (var i = 0; i < 1000; i++) i / 100.0];
 
   for (var row = 0; row < 4; row++) {
@@ -226,11 +332,12 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
       yC[x] = wy / (ws + 1e-9);
       vmax[x] = mx;
     }
-    final b = r == null ? null : (row == 3 ? r : ruler(grid.colSums(y0b, y1b), ppm));
+    final b = r == null ? null : (row == 3 ? r : (chain[row] ?? ruler(vprof(y0b, y1b), ppm)));
     late List<int> xs;
     late List<double> t;
     if (b != null) {
-      final off = 5.0 * pyRound((polyval(r!, xc) - polyval(b, xc)) / 5.0);
+      // chained rows share the strip's origin; an unchained row falls back to whole-square alignment
+      final off = (row == 3 || chain.containsKey(row)) ? 0.0 : 5.0 * pyRound((polyval(r!, xc) - polyval(b, xc)) / 5.0);
       xs = [for (var x = 0; x < sig.w; x++) x];
       t = [for (final x in xs) (polyval(b, x.toDouble()) + off - (endMmR! - 250.0)) / 25.0];
     } else {
