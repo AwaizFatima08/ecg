@@ -25,29 +25,29 @@
   "normal"
  ],
  "thresholds": {
-  "st_elevation_injury": 0.19888001680374146,
+  "st_elevation_injury": 0.18181516230106354,
   "acute_or_recent_mi": 0.3,
-  "old_mi_q_waves": 0.34446704387664795,
-  "st_depression_ischaemia": 0.2151227444410324,
-  "t_wave_abnormality": 0.12533888220787048,
-  "atrial_fibrillation": 0.07509387284517288,
+  "old_mi_q_waves": 0.3520391285419464,
+  "st_depression_ischaemia": 0.11534880846738815,
+  "t_wave_abnormality": 0.16532012820243835,
+  "atrial_fibrillation": 0.20975680649280548,
   "atrial_flutter": 0.3,
   "svt": 0.3,
-  "pvcs": 0.14981073141098022,
-  "pacs": 0.06304752081632614,
-  "first_degree_av_block": 0.3578936755657196,
+  "pvcs": 0.07773282378911972,
+  "pacs": 0.05,
+  "first_degree_av_block": 0.27275335788726807,
   "second_or_third_degree_av_block": 0.3,
-  "lbbb": 0.23054532706737518,
-  "rbbb": 0.1907336264848709,
-  "left_anterior_fascicular_block": 0.05,
+  "lbbb": 0.10871588438749313,
+  "rbbb": 0.07923685014247894,
+  "left_anterior_fascicular_block": 0.1406823694705963,
   "nonspecific_ivcd": 2.0,
   "wpw_preexcitation": 0.3,
   "long_qt": 0.3,
-  "lvh": 0.07435870170593262,
+  "lvh": 0.12395872920751572,
   "rvh": 0.3,
-  "paced_rhythm": 0.05,
+  "paced_rhythm": 0.10918694734573364,
   "low_voltage": 0.3,
-  "normal": 0.4416550099849701
+  "normal": 0.5227695107460022
  },
  "models": [
   "ecgnet_v2_s1.onnx",
@@ -55,7 +55,8 @@
   "ecgnet_v2_s3.onnx"
  ],
  "policy": "v3: rare labels fixed 0.3, floor 0.05, >=90% sensitivity for critical labels, Youden for the rest incl. ST depression",
- "ensemble_val_macro_auc": 0.9470238718605365,
+ "ensemble_val_macro_auc": 0.9561062184968002,
  "trained_on": "classifier v2: PTB-XL + ecg-arrhythmia (53k), fine-tuned on 4,600 student-digitized prints, 3 seeds (homidev, 13 Oct 2026)",
- "input": "(1,13,1000): 12 leads mV at 100 Hz in 3x4 print view + visibility channel"
+ "input": "(1,13,1000): 12 leads mV at 100 Hz in 3x4 print view + visibility channel",
+ "source": "models/v7h/ensemble3_meta_v3.json (v7h, 13 Oct 2026: re-digitized fine-tune, policy v3)"
 }

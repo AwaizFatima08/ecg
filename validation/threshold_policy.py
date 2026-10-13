@@ -6,10 +6,12 @@ Policy v2 (13 Oct 2026):
 - urgent/critical labels (HIGH_SENS): the 10th percentile of positives (>= 90 % sensitivity), floored at FLOOR;
 - everything else: Youden's J, floored at FLOOR;
 - DROP labels never fire.
+Policy v3 (13 Oct 2026, approved by Homi): st_depression_ischaemia leaves HIGH_SENS (Youden's J instead of the
+>= 90 % sensitivity rule) — 48 of 54 Multan false alarms were ST depression alone, critical detection unchanged.
 """
 import numpy as np
 
-HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "st_depression_ischaemia", "atrial_fibrillation",
+HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "atrial_fibrillation",
              "atrial_flutter", "svt", "second_or_third_degree_av_block", "long_qt", "wpw_preexcitation"}
 DROP = {"nonspecific_ivcd"}
 MIN_POS, FLOOR, RARE_FIXED = 20, 0.05, 0.3
