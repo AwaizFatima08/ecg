@@ -123,6 +123,27 @@ the 3×4 leads against the clean signal): before, only 68 % of rhythm strips and
    the selection set and Multan with the fixed digitizer, re-fine-tune the 3 seeds, re-tune thresholds, re-export).
    `ptbxl00959_photo` (complete heart block) now digitizes at median lead r 0.84 (was 0.16).
 
+**v7h (13 Oct 2026, 15:00) — classifier re-fine-tuned on correctly digitized traces (`run_v7h.sh` on homidev,
+25 min GPU):** the 4,600 fine-tune renders, the selection set and Multan were re-digitized with the v7g digitizer and
+the 3 seeds of classifier v2 re-fine-tuned (digitized-val macro-AUC per seed 0.955/0.955/0.954, was 0.946/0.944/0.945;
+the *base* model alone rises 0.890 → 0.921 just from the corrected traces). Ensemble + policy v3 cut-offs on the
+digitized val fold (`models/v7h/ensemble3_meta_v3.json`, macro-AUC 0.956) — **the build now in the app**
+(`export_classifier_onnx.py`).
+
+| | Phase 0 scan / photo | Multan real prints |
+|---|---|---|
+| Critical → CRITICAL | **86 % / 83 %** (v7d 83 / 78) | acute MI ≥ URGENT **90 %** (207/239 CRITICAL, v7d 191) |
+| Critical → at least URGENT | 97 % / 97 % | history of MI ≥ ABNORMAL 100 %, abnormal heartbeat 98 % |
+| Normal → false URGENT/CRITICAL | 7 % / **13 %** (v7d 7 / 10) | **13 %** (36/284; v7d 7 %) |
+| Normal → "no critical pattern" | 60 % / 37 % | 5 % |
+
+`ptbxl21243_photo` (the long-standing miss) is now CRITICAL; `ptbxl15368_scan`, `11500`, `10108`, `18840` rise to CRITICAL;
+`ptbxl04827_photo` and `08624_photo` drop from CRITICAL to URGENT. **Open — Homi's threshold decision:** the policy-v3
+Youden cut-off for ST depression fell from 0.22 to **0.12** on the new validation fold and drives most of the new false
+alarms (22 of the 28 URGENT normals on Multan are ST depression alone; 6 ABNORMAL-truth Phase 0 records moved to URGENT).
+On the validation fold: 0.12 → sens 83 % / spec 81 %; 0.22 → 78 / 86; 0.30 → 73 / 89; a "≥ 90 % specificity" rule gives
+0.32 (73 / 90). Any change is set on validation data only and re-checked on the test sets afterwards.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
