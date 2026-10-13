@@ -1,0 +1,13 @@
+QRS>=120:  BBB 34% (n=146/150) | NORM 0% (n=400/400)
+PR>200:    1AVB 77% (n=141/150) | NORM 7% (n=377/400)
+QTc>=470:  LNGQT 61% (n=80/116) | NORM 7% (n=378/400)
+QTc>=500:  LNGQT 54% (n=80/116) | NORM 7% (n=378/400)
+axis left: LAFB 90% (n=150/150) | NORM not-normal 4% (n=400/400)
+AV block suspected 3AVB  31% (n=16/16)
+AV block suspected 2AVB  7% (n=14/14)
+AV block suspected NORM  2% (n=400/400)
+AV block suspected AFIB  1% (n=150/150)
+AV block suspected 1AVB  5% (n=150/150)
+AV block suspected BBB   5% (n=150/150)
+AV block suspected LAFB  1% (n=150/150)
+median NORM: QRS 60.0 PR 160.0 QTc 376.0

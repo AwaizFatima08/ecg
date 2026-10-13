@@ -11,7 +11,7 @@ rng = np.random.default_rng(3)
 t = np.arange(1000) / 100
 x = np.sin(2 * np.pi * 1.2 * t) + 0.3 * np.sin(2 * np.pi * 8 * t) + 0.1 * rng.normal(size=1000)
 v = {"x": x.tolist()}
-for name, (lo, hi) in {"qrs": (5, 30), "p": (2, 15)}.items():
+for name, (lo, hi) in {"qrs": (5, 30), "p": (2, 15), "hf": (12, 30)}.items():
     b, a = butter(2, [lo / 50, hi / 50], btype="band")
     v[f"filtfilt_{name}"] = filtfilt(b, a, x).tolist()
 e = np.abs(np.gradient(x))
@@ -33,12 +33,16 @@ print("wrote", OUT / "dsp.json")
 from engine_e2e import load_digitized
 from ecg_measure import measure
 recs = []
-for f in sorted((Path(__file__).resolve().parent / "engines" / "out_lite_1600").glob("*_timeseries_canonical.csv"))[:20]:
+HERE_ = Path(__file__).resolve().parent
+files = sorted((HERE_ / "engines" / "out_lite_1600").glob("*_timeseries_canonical.csv"))[:20]
+# complete heart block with tall P waves (escape rhythm 40/min): exercises the second-pass R-peak gate
+files += [HERE_ / "engines" / "out_phase0_student" / "ptbxl00959_photo_timeseries_canonical.csv"]
+for f in files:
     x = load_digitized(f)
     if x is None:
         continue
     m = measure(x)
-    keys = ["rate_bpm", "rr_regular", "pr_ms", "qrs_ms", "qt_ms", "qtc_ms", "axis_deg", "axis_label", "atrial_rate_bpm", "av_block_suspected"]
+    keys = ["rate_bpm", "rr_regular", "pr_ms", "qrs_ms", "qt_ms", "qtc_ms", "axis_deg", "axis_label", "atrial_rate_bpm", "av_block_suspected", "atria_regular"]
     recs.append({"name": f.name, "x": np.round(x.astype(np.float64), 6).tolist(),
                  "m": {k: (bool(m[k]) if isinstance(m.get(k), (bool, np.bool_)) else m.get(k)) for k in keys}})
 (OUT / "measure.json").write_text(json.dumps(recs))

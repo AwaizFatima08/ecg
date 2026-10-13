@@ -68,6 +68,41 @@ confirmed on the test sets, so it needs re-confirmation by the cardiologists' re
 Still missed below URGENT on Phase 0: `ptbxl21243` (both variants) and `ptbxl07835` (photo). Both ensembles
 are kept (`validation/models/student`, `validation/models/v2`). Which to ship is Homi's and the cardiologists' call.
 
+**v7d (13 Oct 2026, morning) — measurement fixes found while checking the phone against Python on `ptbxl00959`
+(complete heart block, atrial 98/min, escape 40/min):**
+1. *R-peak gate.* The beat detector counted tall P waves as beats: six complete heart blocks in Phase 0 were read at
+   87–171/min and now read 37–40/min. `r_peaks` keeps a second pass: only detections whose 12–30 Hz slope energy is
+   ≥ 0.4 × the median of the five strongest beats count, and the first pass is trusted if that leaves < 3 beats or a
+   median RR > 2 s (a few large PVCs). Checked with the new `validation/rate_check.py` (reference: wfdb XQRS on lead II
+   upsampled to 500 Hz; raw XQRS at 100 Hz double-counts T waves): rate within 10 % of the reference on clean 3AVB
+   69 → 100 %, SBRAD 97 → 100 %, student-digitized Phase 0 95 → 99 %, selection set 95 → 98 %, PVC 95 → 94 % (one record),
+   NORM 100 → 100 %. `measure_check.py`: AV block suspected on complete blocks 31 → 56 %, normals unchanged at 2 %.
+2. *Python-only bug.* In `av_relation` a spurious beat near sample 0 made the QRS-blanking slice end negative, which
+   zeroed the whole lead (`resid[0:-1] = 0`) and silently disabled the AV-block check. The Dart port was already correct;
+   Python now matches it. The Dart parity test includes `ptbxl00959_photo` (21 digitized ECGs).
+3. *[PROPOSED] heart block despite an AF call.* On the phone the classifier also called AF (cut-off 0.08) on this record,
+   which suppressed the measurement-based block → URGENT. Now a slow (< 55/min) ventricular rhythm with **regular** P waves
+   outnumbering the QRS is reported as high-grade block (CRITICAL) even when AF is called; fibrillatory waves are not
+   regular, so true AF is unaffected. Phase 0: `ptbxl10640_photo` (true URGENT) moves to CRITICAL (Mobitz-2 flag, 65/min);
+   everything else, incl. all normals, unchanged. `ptbxl15368` (3AVB, escape 58/min) stays URGENT — the 55/min cut-off
+   is **Homi's call**.
+4. *Whole image on the phone.* With tiles of 768 px the U-Net output differed from Python's whole-image run (AV-block
+   probability 0.25 vs 0.44 on this record). The phone now runs the U-Net on the whole 1600-px image (`segTile = 2048`):
+   A12 reads in **35 s (was 51 s)** with no memory pressure. Digitizer accuracy on Phase 0 is the same either way
+   (whole: scan median r 0.97 / 78 % ≥ 0.9, photo 0.88 / 41 %; tile 768: 0.97 / 79 %, 0.88 / 42 %), so the tile boundary
+   only matters for borderline records; whole image is kept because it is faster and bit-for-bit the Python path.
+
+Phase 0 v7d: identical to v7c except the row above (photo URGENT→CRITICAL 13 → 14). Multan v7d: acute MI ≥ URGENT
+90 → **87 %** (191/239 CRITICAL unchanged), normal false alarms 6 → **7 %** (20/284), history of MI / abnormal heartbeat
+unchanged. Every Multan change traces to three prints that the dataset repeats (`mi_2` ×8, `normal_56` ×2, `oldmi_5/91`,
+`oldmi_7/93`): `mi_2` was read at 197/min because the old detector counted T waves — the URGENT it earned was a false
+tachycardia on a 111/min sinus tachycardia, and its MI is a genuine classifier miss now visible as ABNORMAL;
+`normal_56` is a badly digitized trace (flat start, one huge spike) on which the AV-block flag now fires. Requiring
+regular P waves for that flag was tried and rejected: it removes the false alarms but drops complete-heart-block
+detection from 56 % to 6 % (`measure_check.py`), because the P-wave stream after QRS-T subtraction is too noisy.
+
+A12 on `ptbxl00959_photo`: CRITICAL, "Possible high-grade / complete AV block (atrial rate 100, ventricular 41)".
+
 **v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
 0.897 photo vs teacher 0.977 / 0.906) + 3-seed ensemble of classifiers fine-tuned on student-digitized ECGs
 (digitized-val macro-AUC 0.945) + threshold policy v2 + QRS 0.30:**

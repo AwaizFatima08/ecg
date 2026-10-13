@@ -14,6 +14,7 @@ void main() {
       final want = r['m'] as Map<String, dynamic>;
       for (final k in want.keys) {
         final w = (k == 'av_block_suspected') ? (want[k] ?? false) : want[k];
+        if (k == 'atria_regular' && want[k] == null) continue;
         if (got[k] != w) {
           mismatches++;
           // ignore: avoid_print

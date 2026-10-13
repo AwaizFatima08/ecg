@@ -1,0 +1,21 @@
+== baseline n=150
+clean AFIB                   n= 131  within 10%:  98.5%  within 20%:  98.5%  median |err|  0.8%  (ref missing 19, ours missing 0)
+clean PVC                    n= 144  within 10%:  95.1%  within 20%:  97.2%  median |err|  0.6%  (ref missing 6, ours missing 0)
+== hf+fallback gate=0.4
+clean NORM                   n= 148  within 10%: 100.0%  within 20%: 100.0%  median |err|  0.4%  (ref missing 2, ours missing 0)
+clean 3AVB                   n=  13  within 10%: 100.0%  within 20%: 100.0%  median |err|  0.5%  (ref missing 3, ours missing 0)
+clean SBRAD                  n= 145  within 10%: 100.0%  within 20%: 100.0%  median |err|  0.6%  (ref missing 5, ours missing 0)
+clean AFIB                   n= 131  within 10%:  98.5%  within 20%:  98.5%  median |err|  0.7%  (ref missing 19, ours missing 0)
+clean BBB                    n= 117  within 10%:  98.3%  within 20%:  99.1%  median |err|  0.6%  (ref missing 33, ours missing 0)
+clean PVC                    n= 144  within 10%:  94.4%  within 20%:  95.8%  median |err|  0.6%  (ref missing 6, ours missing 0)
+digitized out_phase0_student n= 236  within 10%:  99.2%  within 20%: 100.0%  median |err|  0.5%  (ref missing 16, ours missing 0)
+digitized out_sel_chosen     n= 372  within 10%:  97.6%  within 20%:  98.4%  median |err|  0.6%  (ref missing 28, ours missing 0)
+== hf+fallback gate=0.5
+clean NORM                   n= 148  within 10%: 100.0%  within 20%: 100.0%  median |err|  0.4%  (ref missing 2, ours missing 0)
+clean 3AVB                   n=  13  within 10%:  92.3%  within 20%: 100.0%  median |err|  0.5%  (ref missing 3, ours missing 0)
+clean SBRAD                  n= 145  within 10%: 100.0%  within 20%: 100.0%  median |err|  0.6%  (ref missing 5, ours missing 0)
+clean AFIB                   n= 131  within 10%:  99.2%  within 20%:  99.2%  median |err|  0.7%  (ref missing 19, ours missing 0)
+clean BBB                    n= 117  within 10%:  98.3%  within 20%:  99.1%  median |err|  0.6%  (ref missing 33, ours missing 0)
+clean PVC                    n= 144  within 10%:  93.8%  within 20%:  95.8%  median |err|  0.6%  (ref missing 6, ours missing 0)
+digitized out_phase0_student n= 236  within 10%:  98.7%  within 20%: 100.0%  median |err|  0.5%  (ref missing 16, ours missing 0)
+digitized out_sel_chosen     n= 372  within 10%:  97.8%  within 20%:  98.7%  median |err|  0.6%  (ref missing 28, ours missing 0)

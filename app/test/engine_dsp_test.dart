@@ -17,6 +17,7 @@ void main() {
   test('filtfilt matches scipy (both bands)', () {
     close(Band.qrs.apply(d('x')), d('filtfilt_qrs'), 1e-9);
     close(Band.pWave.apply(d('x')), d('filtfilt_p'), 1e-9);
+    close(Band.qrsHf.apply(d('x')), d('filtfilt_hf'), 1e-9);
   });
   test('find_peaks matches scipy', () {
     final e = d('e');

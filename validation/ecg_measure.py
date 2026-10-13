@@ -22,6 +22,7 @@ from scipy.signal import butter, filtfilt, find_peaks
 
 FS = 100
 COLUMN = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+QRS_GATE = 0.4  # second-pass R-peak gate, see r_peaks()
 
 
 def _bp(x, lo, hi):
@@ -35,6 +36,16 @@ def r_peaks(lead2: np.ndarray) -> np.ndarray:
     pk, _ = find_peaks(e, distance=int(0.25 * FS), height=np.percentile(e, 98) * 0.4)
     if len(pk) == 0:
         return pk
+    # Second pass (13 Oct 2026): keep only detections whose high-frequency slope energy (12-30 Hz) is comparable to
+    # the strongest beats, so tall P waves are not counted as beats (complete heart block with a slow escape rhythm
+    # read as 103/min instead of 40/min before). If that leaves too few or implausibly slow beats (e.g. a few large
+    # PVCs dominating), the first pass is trusted. Validated with rate_check.py: 3AVB 69 -> 100 %, digitized 95 -> 99 %.
+    hf = np.abs(np.gradient(_bp(lead2, 12, 30)))
+    hfp = np.array([hf[max(0, p - 5):p + 6].max() for p in pk])
+    top = np.sort(hfp)[::-1][:5]
+    keep = pk[hfp >= QRS_GATE * np.median(top)]
+    if len(keep) >= 3 and np.median(np.diff(keep)) <= 2.0 * FS:
+        pk = keep
     # move each detection to the dominant extremum of the raw QRS (+/- 60 ms)
     out = []
     for p in pk:
@@ -165,7 +176,7 @@ def av_relation(lead2: np.ndarray, r: np.ndarray, beat: np.ndarray, on: int, off
             resid[a:b] -= beat
     # blank the QRS itself (subtraction is imperfect there)
     for p in r:
-        resid[max(0, p - pre + on - 2):min(len(resid), p - pre + off + 2)] = 0
+        resid[max(0, p - pre + on - 2):max(0, min(len(resid), p - pre + off + 2))] = 0  # end clamped: a negative end wrapped round and zeroed the whole lead (fixed 13 Oct 2026)
     y = _bp(resid, 2, 15)
     qrs_amp = np.percentile(np.abs(lead2 - np.median(lead2)), 99)
     h = max(0.04, 0.12 * qrs_amp)

@@ -14,8 +14,12 @@ import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v7c (2026-10-13)';
+const engineVersion = 'on-device engine v7d (2026-10-13)';
 const rulesVersion = '2026-10-12.1-proposed';
+
+/// U-Net tile size in px (multiple of 128). 2048 = whole image at our 1600-px working size;
+/// tiling trades accuracy for memory (see docs/engine-plan.md, tiling experiment 13 Oct 2026).
+const segTile = 2048;
 
 /// Classifier label -> (kind, finding/rhythm code, category, display name). Same table as engine_e2e.MAP.
 const _map = <String, (String, String, String, String)>{
@@ -87,9 +91,12 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
       'confidence': rhythmCheck.pLethal.clamp(0.0, 0.95),
     };
   }
-  if (m.avBlockSuspected && !afLike) {
+  final slow = bpm != null && bpm < 55;
+  // [PROPOSED, Homi to confirm] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a high-grade /
+  // complete block even when the classifier also calls AF, provided the P waves are regular (fibrillatory waves are not);
+  // the AF call only suppresses the faster, second-degree case. Same logic as engine_e2e.py.
+  if (m.avBlockSuspected && (!afLike || (slow && m.atriaRegular == true))) {
     // [PROPOSED, Homi to confirm] a slow ventricular rate (< 55) makes a high-grade/complete block likely -> CRITICAL.
-    final slow = bpm != null && bpm < 55;
     findings.add({
       'code': slow ? 'high_grade_av_block' : 'second_degree_av_block_mobitz2',
       'category': 'conduction', 'leads': ['II'], 'confidence': 0.6,
@@ -175,7 +182,7 @@ class EcgEngine {
     onStep?.call('Preparing the image…');
     final t = await compute(_prepare, jpeg);
     onStep?.call('Finding the ECG trace…');
-    final maps = await _seg!.run(t);
+    final maps = await _seg!.run(t, tile: segTile);
     onStep?.call('Reading the trace…');
     final dm = await compute(_digitizeAndMeasure, maps);
     Map<String, dynamic> reading;

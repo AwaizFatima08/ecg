@@ -18,12 +18,13 @@ class Measurements {
   int? atrialRateBpm;
   double? conductionRatio;
   bool avBlockSuspected = false;
+  bool? atriaRegular;
   final List<String> notes = [];
 
   Map<String, Object?> toJson() => {
         'rate_bpm': rateBpm, 'rr_regular': rrRegular, 'pr_ms': prMs, 'qrs_ms': qrsMs, 'qt_ms': qtMs,
         'qtc_ms': qtcMs, 'axis_deg': axisDeg, 'axis_label': axisLabel, 'atrial_rate_bpm': atrialRateBpm,
-        'av_block_suspected': avBlockSuspected,
+        'av_block_suspected': avBlockSuspected, 'atria_regular': atriaRegular,
       };
 }
 
@@ -63,11 +64,28 @@ int argmaxAbs(List<double> v) {
   return best;
 }
 
+/// Second-pass R-peak gate (fraction of the median of the 5 strongest beats' 12-30 Hz slope energy).
+const qrsGate = 0.4;
+
 List<int> rPeaks(List<double> lead2) {
   final y = Band.qrs.apply(lead2);
   final e = gradient(y).map((v) => v.abs()).toList();
-  final pk = findPeaks(e, distance: (0.25 * fs).toInt(), height: percentile(e, 98) * 0.4);
+  var pk = findPeaks(e, distance: (0.25 * fs).toInt(), height: percentile(e, 98) * 0.4);
   if (pk.isEmpty) return pk;
+  // Second pass (ecg_measure.r_peaks, 13 Oct 2026): keep detections whose 12-30 Hz slope energy is comparable to
+  // the strongest beats, so tall P waves (complete heart block, slow escape rhythms) are not counted as beats.
+  // Trust the first pass if that leaves too few or implausibly slow beats (a few large PVCs).
+  final hf = gradient(Band.qrsHf.apply(lead2)).map((v) => v.abs()).toList();
+  final hfp = [
+    for (final p in pk) hf.sublist(math.max(0, p - 5), math.min(hf.length, p + 6)).reduce(math.max),
+  ];
+  final top = List<double>.from(hfp)..sort((a, b) => b.compareTo(a));
+  final gate = qrsGate * median(top.sublist(0, math.min(5, top.length)));
+  final keep = [for (var i = 0; i < pk.length; i++) if (hfp[i] >= gate) pk[i]];
+  if (keep.length >= 3) {
+    final d = [for (var i = 1; i < keep.length; i++) (keep[i] - keep[i - 1]).toDouble()];
+    if (median(d) <= 2.0 * fs) pk = keep;
+  }
   final med = median(lead2);
   final out = <int>{};
   for (final p in pk) {
@@ -270,6 +288,7 @@ void _avRelation(List<double> lead2, List<int> r, List<double> beat, int on, int
     locked = phases.where((p) => (p - m).abs() < 0.06).length / phases.length >= 0.6;
   }
   out.atrialRateBpm = pyRound(aRate);
+  out.atriaRegular = std(pp) / mean(pp) < 0.15;
   out.conductionRatio = aRate / vRate;
   out.avBlockSuspected = aRate / vRate >= 1.4 && vRate < 70 && aRate >= 55 && aRate <= 150 && !locked;
 }
