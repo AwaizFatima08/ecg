@@ -102,7 +102,7 @@ def measure(x: np.ndarray) -> dict:
     vel = np.convolve(vel, np.ones(2) / 2, mode="same")
     peak = int(np.argmax(vel[pre - 8:pre + 8])) + pre - 8
     # 0.30 (was 0.15): calibrated on 600 clean-vs-digitized pairs — digitized traces blur QRS edges and read ~20 ms
-    # too wide at 0.15; 0.30 gives zero median bias, 73 % sensitivity / 94 % specificity for QRS >= 120 ms [PROPOSED]
+    # too wide at 0.15; 0.30 gives zero median bias, 73 % sensitivity / 94 % specificity for QRS >= 120 ms [Homi approved 13 Oct 2026]
     thr = 0.30 * vel[peak] + np.median(vel[:15])
     on = peak
     while on > 5 and vel[on - 1] > thr:

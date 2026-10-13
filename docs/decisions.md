@@ -26,6 +26,17 @@ Nothing marked **OPEN** or **ASSUMED** is final until Homi confirms it in writin
 - **Training data** (approved): PTB-XL (CC BY 4.0), the Multan *ECG Images dataset of Cardiac Patients* (Ch. Pervaiz Elahi
   Institute of Cardiology, Mendeley Data, CC BY 4.0) and PhysioNet VT/VF databases (vfdb, cudb).
 
+## Engine rules approved by Homi (13 Oct 2026, "all agreed")
+Homi approved in chat, after the morning report on v7d:
+- **AF + slow block rule:** a slow (< 55/min) ventricular rhythm with regular P waves outnumbering the QRS is reported
+  as high-grade / complete AV block (CRITICAL) even when the classifier also calls AF.
+- **Slow cut-off 55/min** for escalating the measurement-based AV-block flag from URGENT (second-degree) to CRITICAL
+  (high-grade). A complete block with an escape rate ≥ 55 (e.g. `ptbxl15368`, 58/min) stays URGENT.
+- **Threshold policy v3** (ST-depression cut-off by Youden's J; ≥ 90 % sensitivity for the other critical labels).
+- **QRS onset/offset velocity threshold 0.30** (calibrated on digitized traces).
+- **R-peak gate** (second pass, 12–30 Hz slope energy) and whole-image U-Net on the phone.
+These remain subject to the cardiologists' review before release (gate above).
+
 ## Decisions taken during the build (12 Oct 2026)
 
 - **Build order:** Homi asked for the full build ("build, install, test, debug, prepare final version") and chose

@@ -92,11 +92,11 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
     };
   }
   final slow = bpm != null && bpm < 55;
-  // [PROPOSED, Homi to confirm] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a high-grade /
+  // [Homi approved 13 Oct 2026] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a high-grade /
   // complete block even when the classifier also calls AF, provided the P waves are regular (fibrillatory waves are not);
   // the AF call only suppresses the faster, second-degree case. Same logic as engine_e2e.py.
   if (m.avBlockSuspected && (!afLike || (slow && m.atriaRegular == true))) {
-    // [PROPOSED, Homi to confirm] a slow ventricular rate (< 55) makes a high-grade/complete block likely -> CRITICAL.
+    // [Homi approved 13 Oct 2026] a slow ventricular rate (< 55) makes a high-grade/complete block likely -> CRITICAL.
     findings.add({
       'code': slow ? 'high_grade_av_block' : 'second_degree_av_block_mobitz2',
       'category': 'conduction', 'leads': ['II'], 'confidence': 0.6,

@@ -163,12 +163,12 @@ def main() -> int:
         # Heart block: more P waves than QRS with a slow ventricular rate (not in AF/flutter). URGENT, not
         # CRITICAL on its own: 2 % false positives on normal ECGs in the PTB-XL check.
         slow = bpm is not None and bpm < 55
-        # [PROPOSED, Homi to confirm] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a
+        # [Homi approved 13 Oct 2026] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a
         # high-grade/complete block even when the classifier also calls AF, provided the P waves are regular (fibrillatory
         # waves are not), so the AF call only suppresses the faster, second-degree case (fibrillatory waves look like P waves).
         # Found on ptbxl00959 (complete heart block, escape 40/min, read as AF + URGENT), 13 Oct 2026.
         if m.get("av_block_suspected") and (not af_like or (slow and m.get("atria_regular"))):
-            # [PROPOSED, Homi to confirm] with a slow ventricular rate (< 55) the block is likely high-grade/complete
+            # [Homi approved 13 Oct 2026] with a slow ventricular rate (< 55) the block is likely high-grade/complete
             # -> CRITICAL; PTB-XL check: 25 % of complete blocks, 0.2 % of normals, 3.3 % of sinus bradycardias.
             findings.append({"code": "high_grade_av_block" if slow else "second_degree_av_block_mobitz2",
                              "category": "conduction", "leads": ["II"],
