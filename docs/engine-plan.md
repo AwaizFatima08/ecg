@@ -101,7 +101,8 @@ tachycardia on a 111/min sinus tachycardia, and its MI is a genuine classifier m
 regular P waves for that flag was tried and rejected: it removes the false alarms but drops complete-heart-block
 detection from 56 % to 6 % (`measure_check.py`), because the P-wave stream after QRS-T subtraction is too noisy.
 
-A12 on `ptbxl00959_photo`: CRITICAL, "Possible high-grade / complete AV block (atrial rate 100, ventricular 41)".
+Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
+Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
 **v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
 0.897 photo vs teacher 0.977 / 0.906) + 3-seed ensemble of classifiers fine-tuned on student-digitized ECGs
