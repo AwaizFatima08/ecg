@@ -51,7 +51,11 @@ fine-tuned on student-digitized ECGs (2 seeds; ensemble digitized-val macro-AUC 
 | normal → false URGENT/CRITICAL | **11 %** | 19 % |
 | normal → "no critical pattern" | **33 %** | 8 % |
 
-v7 is the more sensitive operating point (recommended for the critical-first goal); v6 the more specific. Both ensembles
+v7 is the more sensitive operating point (recommended for the critical-first goal); v6 the more specific.
+**v7b** = v7 with the ST-depression cut-off set by Youden's J instead of the ≥ 90 %-sensitivity rule (threshold policy v3
+candidate, `models/v2/ensemble2_meta_v3.json`): every critical number is unchanged, false alarms on normals fall to 7 %
+(Phase 0 scans) and 15 % (Multan), because 48 of v7's 54 Multan false alarms were ST depression alone. This choice was
+confirmed on the test sets, so it needs re-confirmation by the cardiologists' review. **v7b is the recommended build.** Both ensembles
 are kept (`validation/models/student`, `validation/models/v2`). Which to ship is Homi's and the cardiologists' call.
 
 **v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
