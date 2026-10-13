@@ -8,11 +8,15 @@ Policy v2 (13 Oct 2026):
 - DROP labels never fire.
 Policy v3 (13 Oct 2026, approved by Homi): st_depression_ischaemia leaves HIGH_SENS (Youden's J instead of the
 >= 90 % sensitivity rule) — 48 of 54 Multan false alarms were ST depression alone, critical detection unchanged.
+Policy v4 (13 Oct 2026, approved by Homi): st_depression_ischaemia (URGENT on its own, never CRITICAL) gets the cut-off
+with >= 90 % SPECIFICITY on the calibration set (HIGH_SPEC) — Youden fell to 0.12 after the digitizer fix and made
+ST depression the main false-alarm driver (22 of 28 extra URGENT normals on Multan).
 """
 import numpy as np
 
 HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "atrial_fibrillation",
              "atrial_flutter", "svt", "second_or_third_degree_av_block", "long_qt", "wpw_preexcitation"}
+HIGH_SPEC = {"st_depression_ischaemia"}
 DROP = {"nonspecific_ivcd"}
 MIN_POS, FLOOR, RARE_FIXED = 20, 0.05, 0.3
 
@@ -28,6 +32,9 @@ def thresholds(labels, Y, P):
         elif n in HIGH_SENS:
             s = np.sort(p[y == 1])
             thr[n] = max(FLOOR, float(s[int(0.1 * len(s))]))
+        elif n in HIGH_SPEC:
+            s = np.sort(p[y == 0])
+            thr[n] = max(FLOOR, float(s[int(0.9 * len(s))]))
         else:
             c = np.unique(p)
             best = max(c, key=lambda t: ((p >= t) & (y == 1)).sum() / y.sum() + ((p < t) & (y == 0)).sum() / (y == 0).sum())

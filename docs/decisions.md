@@ -35,6 +35,9 @@ Homi approved in chat, after the morning report on v7d:
 - **Threshold policy v3** (ST-depression cut-off by Youden's J; ≥ 90 % sensitivity for the other critical labels).
 - **QRS onset/offset velocity threshold 0.30** (calibrated on digitized traces).
 - **R-peak gate** (second pass, 12–30 Hz slope energy) and whole-image U-Net on the phone.
+- **Threshold policy v4 (13 Oct 2026, afternoon, "agreed"):** ST depression (URGENT on its own) gets the cut-off with
+  ≥ 90 % *specificity* on the digitized validation fold (0.32; Youden had fallen to 0.12 after the digitizer fix and
+  drove most new false alarms). Set on validation data only, then checked on the test sets (v7i).
 These remain subject to the cardiologists' review before release (gate above).
 
 ## Decisions taken during the build (12 Oct 2026)

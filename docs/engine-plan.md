@@ -144,6 +144,24 @@ alarms (22 of the 28 URGENT normals on Multan are ST depression alone; 6 ABNORMA
 On the validation fold: 0.12 → sens 83 % / spec 81 %; 0.22 → 78 / 86; 0.30 → 73 / 89; a "≥ 90 % specificity" rule gives
 0.32 (73 / 90). Any change is set on validation data only and re-checked on the test sets afterwards.
 
+**v7i (13 Oct 2026, 16:00) = v7h + threshold policy v4** (Homi: "resolve as suggested"): ST depression at ≥ 90 %
+specificity on the digitized validation fold → cut-off 0.32 (was 0.12). Everything else identical to v7h.
+
+| | v7h (Youden 0.12) | **v7i (0.32)** |
+|---|---|---|
+| Phase 0 critical → CRITICAL, scan / photo | 86 / 83 % | 86 / 83 % |
+| Phase 0 critical → ≥ URGENT | 97 / 97 % | **89 / 89 %** |
+| Phase 0 normal → false URGENT/CRITICAL | 7 / 13 % | 7 / 10 % |
+| Multan acute MI ≥ URGENT (CRITICAL) | 90 % (207) | **87 %** (207) |
+| Multan normal false alarms | 13 % | **7 %** |
+
+The price: records that the classifier does not recognise as infarction were kept at URGENT only by the ST-depression
+net — `ptbxl08611` (inferior MI, both variants), `ptbxl08624` (anteroseptal MI + injury, both), `ptbxl18840_scan`,
+`ptbxl04827_photo` (IMI + complete block) now land at ABNORMAL; on Multan 8 acute-MI prints (one duplicated print,
+`mi_2` ×8) drop from URGENT to ABNORMAL. These are classifier misses of the STEMI pattern, now visible rather than masked;
+the next engineering target is the infarction labels themselves (acute MI / ST elevation sensitivity), not the ST-depression
+cut-off. A middle setting (0.22, the v7c value: val sens 78 % / spec 86 %) remains an option for Homi.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 

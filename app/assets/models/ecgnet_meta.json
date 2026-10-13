@@ -28,7 +28,7 @@
   "st_elevation_injury": 0.18181516230106354,
   "acute_or_recent_mi": 0.3,
   "old_mi_q_waves": 0.3520391285419464,
-  "st_depression_ischaemia": 0.11534880846738815,
+  "st_depression_ischaemia": 0.31940558552742004,
   "t_wave_abnormality": 0.16532012820243835,
   "atrial_fibrillation": 0.20975680649280548,
   "atrial_flutter": 0.3,
@@ -54,9 +54,9 @@
   "ecgnet_v2_s2.onnx",
   "ecgnet_v2_s3.onnx"
  ],
- "policy": "v3: rare labels fixed 0.3, floor 0.05, >=90% sensitivity for critical labels, Youden for the rest incl. ST depression",
+ "policy": "v4 (13 Oct 2026): ST depression at >= 90 % specificity; critical labels >= 90 % sensitivity; rare labels 0.3; floor 0.05",
  "ensemble_val_macro_auc": 0.9561062184968002,
  "trained_on": "classifier v2: PTB-XL + ecg-arrhythmia (53k), fine-tuned on 4,600 student-digitized prints, 3 seeds (homidev, 13 Oct 2026)",
  "input": "(1,13,1000): 12 leads mV at 100 Hz in 3x4 print view + visibility channel",
- "source": "models/v7h/ensemble3_meta_v3.json (v7h, 13 Oct 2026: re-digitized fine-tune, policy v3)"
+ "source": "models/v7h/ensemble3_meta_v4.json"
 }
