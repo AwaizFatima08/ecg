@@ -31,6 +31,29 @@ ST-elevation injury 0.97, AF 0.98, LBBB/RBBB ≈1.0, PVCs 0.99, LVH 0.96. Weak: 
 | Normal → false URGENT/CRITICAL, scan / photo | 7 % / 13 % | 17 % / 50 % | **7 % / 3 %** |
 | Normal → "no critical pattern", scan / photo | 13 % / 0 % | 0 % | **57 % / 47 %** |
 
+**v7 (13 Oct 2026, 05:10) — round 2: classifier v2 trained on PTB-XL + ecg-arrhythmia (53 k training ECGs; 176 second/
+third-degree AV blocks, 138 WPW, 449 long QT, 965 ST-elevation injury vs a handful before; held-out macro-AUC 0.967),
+fine-tuned on student-digitized ECGs (2 seeds; ensemble digitized-val macro-AUC 0.947), student-B digitizer:**
+
+| Phase 0, scan / photo | v6 | **v7** |
+|---|---|---|
+| Critical → at least URGENT | 94 % / 97 % | **97 % / 94 %** (misses: `ptbxl21243`; photo also `ptbxl07835`) |
+| Critical → CRITICAL | 64 % / 61 % | **81 % / 72 %** |
+| Complete heart block → CRITICAL | 43 % / 43 % | **71 % / 64 %** |
+| Normal → false URGENT/CRITICAL | 10 % / 20 % | 10 % / 20 % |
+| Normal → "no critical pattern" | 57 % / 47 % | 67 % / 43 % |
+
+| Multan real prints, **student-digitized (the phone path)** | v6 | v7 |
+|---|---|---|
+| acute-MI prints ≥ URGENT | 63 % (87 CRITICAL) | **90 % (191 CRITICAL)** |
+| history-of-MI ≥ ABNORMAL | 100 % | 100 % |
+| abnormal-heartbeat ≥ ABNORMAL | 94 % | 97 % |
+| normal → false URGENT/CRITICAL | **11 %** | 19 % |
+| normal → "no critical pattern" | **33 %** | 8 % |
+
+v7 is the more sensitive operating point (recommended for the critical-first goal); v6 the more specific. Both ensembles
+are kept (`validation/models/student`, `validation/models/v2`). Which to ship is Homi's and the cardiologists' call.
+
 **v6 (13 Oct 2026, 04:30) — the phone pipeline: student-B U-Net (2.3 M params, 8.6 MB; selection-set median r 0.968 scan /
 0.897 photo vs teacher 0.977 / 0.906) + 3-seed ensemble of classifiers fine-tuned on student-digitized ECGs
 (digitized-val macro-AUC 0.945) + threshold policy v2 + QRS 0.30:**
