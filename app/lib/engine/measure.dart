@@ -287,10 +287,19 @@ void _avRelation(List<double> lead2, List<int> r, List<double> beat, int on, int
     final m = median(phases);
     locked = phases.where((p) => (p - m).abs() < 0.06).length / phases.length >= 0.6;
   }
+  // PR for each QRS: last P within 0.6 s before R (ecg_measure.av_relation)
+  final prs = <double>[];
+  for (final q in r) {
+    final before = [for (final p in pk) if (p < q - 4 && p > q - 60) p];
+    if (before.isNotEmpty) prs.add((q - before.last) / fs);
+  }
+  final prSd = prs.length >= 3 ? std(prs) : 0.0;
+  // Guard (21 Oct 2026): a conducted rhythm has a fixed PR, so a small PR sd means the extra "P" candidates are T waves.
+  final conducted = prs.length >= 3 && prSd * 1000 <= 40;
   out.atrialRateBpm = pyRound(aRate);
   out.atriaRegular = std(pp) / mean(pp) < 0.15;
   out.conductionRatio = aRate / vRate;
-  out.avBlockSuspected = aRate / vRate >= 1.4 && vRate < 70 && aRate >= 55 && aRate <= 150 && !locked;
+  out.avBlockSuspected = aRate / vRate >= 1.4 && vRate < 70 && aRate >= 55 && aRate <= 150 && !locked && !conducted;
 }
 
 /// Fills NaN gaps the way validation/engine_e2e.load_digitized does: per lead, linear interpolation
@@ -315,3 +324,29 @@ List<List<double>> fillGaps(List<Float64List> x) {
       }(),
   ];
 }
+
+/// Gate for the lethal-rhythm model (ecg_measure.lethal_plausible, 21 Oct 2026): a VT / VF / asystole call must be
+/// consistent with what the beat detector sees on the lead II strip.
+bool lethalPlausible(List<double> lead2, String cls, int? qrsMs) {
+  final r = rPeaks(lead2);
+  final n = r.length;
+  final rr = <double>[];
+  var gap = 10.0;
+  if (n >= 2) {
+    gap = 0;
+    for (var i = 1; i < n; i++) {
+      final d = (r[i] - r[i - 1]) / fs;
+      if (d > gap) gap = d;
+      if (d > 0.25 && d < 2.5) rr.add(d);
+    }
+  }
+  final rate = rr.length >= 2 ? 60 / median(rr) : null;
+  final cv = rr.length >= 2 ? std(rr) / mean(rr) : 1.0;
+  final med = median(lead2);
+  final amp = percentile([for (final v in lead2) (v - med).abs()], 99);
+  if (cls == 'asystole') return n <= 4 || gap >= 2.0 || amp < 0.15; // flat strip: the beats found are noise
+  final wide = qrsMs == null || qrsMs >= 110; // an organised narrow-QRS rhythm is neither VT nor VF
+  if (cls == 'vf') return wide && cv >= 0.15; // VF is never a regular rhythm
+  return wide && (rate == null || rate >= 90); // vt
+}
+

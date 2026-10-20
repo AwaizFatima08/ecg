@@ -20,7 +20,7 @@ import numpy as np
 import torch
 from scipy.signal import butter, filtfilt, find_peaks
 
-from ecg_measure import measure
+from ecg_measure import lethal_plausible, measure
 from train_rhythm import RhythmNet, prep as rhythm_prep
 from train_classifier import COLUMN, EcgNet, paper_view
 
@@ -155,8 +155,8 @@ def main() -> int:
         if rhythm_net is not None:
             with torch.no_grad():
                 pr = torch.softmax(rhythm_net(torch.from_numpy(rhythm_prep(x[1][None]))), 1).numpy()[0]
-            if 1 - pr[0] >= 0.5:
-                k = int(np.argmax(pr[1:])) + 1
+            k = int(np.argmax(pr[1:])) + 1
+            if 1 - pr[0] >= 0.5 and lethal_plausible(x[1], ["", "vt", "vf", "asystole"][k], m.get("qrs_ms")):
                 code = ["", "ventricular_tachycardia", "ventricular_fibrillation", "asystole"][k]
                 rhythm = {"code": code, "label": "Possible VT / VF or asystole (lethal-rhythm check)",
                           "regular": regular, "confidence": float(min(0.95, 1 - pr[0]))}

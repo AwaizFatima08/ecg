@@ -67,15 +67,41 @@ ZERO_LIKELIHOOD_OK = {"AFIB", "AFLT", "SVTAC", "PSVT", "PVC", "BIGU", "TRIGU", "
 NAMES = list(LABELS)
 
 
+# Homi, 21 Oct 2026: "an old infarct is not an emergency" — an injury statement on an old infarct (ventricular aneurysm,
+# or infarction stadium II-III / III) is persistent ST elevation, not acute injury, so it is NOT a positive for the
+# critical st_elevation_injury label (it still carries old_mi_q_waves).
+OLD_STADIA = {"Stadium II-III", "Stadium III"}
+
+
 def label_vector(codes: dict, stadium: str) -> np.ndarray:
     keys = {k for k, v in codes.items() if v >= 50 or k in ZERO_LIKELIHOOD_OK}
     y = np.zeros(len(NAMES), np.float32)
     for i, n in enumerate(NAMES):
         if n == "acute_or_recent_mi":
             y[i] = float(stadium == "Stadium I" and bool(keys & MI_CODES))
+        elif n == "st_elevation_injury":
+            y[i] = float(bool(keys & set(LABELS[n])) and "ANEUR" not in keys and stadium not in OLD_STADIA)
         else:
             y[i] = float(bool(keys & set(LABELS[n])))
     return y
+
+
+def hard_negative_weight(codes: dict, stadium: str) -> float:
+    """Loss weight for the two acute-infarction labels on records that look like infarcts but are not acute: old MI /
+    ischaemia / aneurysm without an injury statement, and injury statements re-labelled old by label_vector. These are
+    the patterns the classifier confused with acute injury (dossier 21 Oct 2026)."""
+    keys = {k for k, v in codes.items() if v >= 50}
+    if stadium == "Stadium I":
+        return 1.0
+    if "ANEUR" in keys or (stadium in OLD_STADIA and keys & MI_CODES):
+        return HARD_NEG  # known old infarct (PTB-XL stadium / aneurysm)
+    if keys & set(LABELS["st_depression_ischaemia"]) and not keys & (MI_CODES | set(LABELS["st_elevation_injury"])):
+        return HARD_NEG_ISC  # ischaemia without any infarction statement
+    # MI of unknown age without an injury statement is left at 1.0: PTB-XL codes some acute STEMIs that way (ptbxl02047)
+    return 1.0
+
+
+HARD_NEG, HARD_NEG_ISC = 3.0, 2.0
 
 
 def load(df: pd.DataFrame) -> np.ndarray:

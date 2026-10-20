@@ -14,7 +14,7 @@ import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v7i (2026-10-13)';
+const engineVersion = 'on-device engine v7k (2026-10-21)';
 const rulesVersion = '2026-10-12.1-proposed';
 
 /// U-Net tile size in px (multiple of 128). 2048 = whole image at our 1600-px working size;
@@ -192,8 +192,11 @@ class EcgEngine {
       onStep?.call('Checking for patterns…');
       final x = dm['x'] as List<List<double>>;
       final p = await _clf!.predict(x);
-      final rc = await _rhythm!.predict(x[1]);
-      reading = buildReading(dm['m'] as Measurements, p, _clf!.thresholds, rc);
+      final m = dm['m'] as Measurements;
+      RhythmResult? rc = await _rhythm!.predict(x[1]);
+      // lethal-rhythm gate (21 Oct 2026): drop a VT/VF/asystole call the beat detector contradicts
+      if (rc.pLethal >= 0.5 && !lethalPlausible(x[1], rc.lethalClass, m.qrsMs)) rc = null;
+      reading = buildReading(m, p, _clf!.thresholds, rc);
     }
     final ev = evaluateEcg(reading);
     return EcgResult.fromResponse({

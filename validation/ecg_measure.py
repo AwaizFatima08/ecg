@@ -215,5 +215,31 @@ def av_relation(lead2: np.ndarray, r: np.ndarray, beat: np.ndarray, on: int, off
         ph = np.array(phases)
         locked = np.mean(np.abs(ph - np.median(ph)) < 0.06) >= 0.6
     out["p_locked_to_qrs"] = bool(locked)
-    out["av_block_suspected"] = bool(a_rate / v_rate >= 1.4 and v_rate < 70 and 55 <= a_rate <= 150 and not locked)
+    # Guard (21 Oct 2026): in a conducted rhythm the last P before each QRS sits at a fixed interval, so a small PR sd
+    # means the extra "P" candidates are T waves, not blocked P waves. Clean 3AVB unchanged (56 %), digitized Phase 0
+    # normals flagged 3 -> 1 of 60 (avb_guard_check.py). A T-zone exclusion was tried and rejected (3AVB 56 -> 44 %).
+    conducted = len(prs) >= 3 and pr_sd * 1000 <= 40
+    out["av_block_suspected"] = bool(a_rate / v_rate >= 1.4 and v_rate < 70 and 55 <= a_rate <= 150 and not locked and not conducted)
     return out
+
+
+def lethal_plausible(lead2: np.ndarray, cls: str, qrs_ms: int | None) -> bool:
+    """Gate for the lethal-rhythm model (21 Oct 2026, lethal_gate_check.py gate F): a VT / VF / asystole call must be
+    consistent with what the beat detector sees on the strip. Digitized prints: 30 false lethal calls in 1,580 traces
+    -> 2 (one record with bizarre wide complexes); held-out vfdb/cudb windows: any-lethal sensitivity 0.998 -> 0.76
+    (VF 0.95, VT 0.78; 'asystole' windows there carry agonal activity that a printed flat line would not)."""
+    r = r_peaks(lead2)
+    n = len(r)
+    rr = np.diff(r) / FS
+    rr = rr[(rr > 0.25) & (rr < 2.5)]
+    rate = 60 / float(np.median(rr)) if len(rr) >= 2 else None
+    cv = float(rr.std() / rr.mean()) if len(rr) >= 2 else 1.0
+    gap = float(np.diff(r).max() / FS) if n >= 2 else 10.0
+    amp = float(np.percentile(np.abs(lead2 - np.median(lead2)), 99))
+    if cls == "asystole":
+        return n <= 4 or gap >= 2.0 or amp < 0.15        # flat strip: the beats found are noise
+    wide = qrs_ms is None or qrs_ms >= 110                # an organised narrow-QRS rhythm is neither VT nor VF
+    if cls == "vf":
+        return wide and cv >= 0.15                       # VF is never a regular rhythm
+    return wide and (rate is None or rate >= 90)         # vt
+

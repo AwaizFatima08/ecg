@@ -162,6 +162,28 @@ net — `ptbxl08611` (inferior MI, both variants), `ptbxl08624` (anteroseptal MI
 the next engineering target is the infarction labels themselves (acute MI / ST elevation sensitivity), not the ST-depression
 cut-off. A middle setting (0.22, the v7c value: val sens 78 % / spec 86 %) remains an option for Homi.
 
+**21 Oct 2026 — adjudication round 1 (no cardiologist available; Homi adjudicates, see `docs/reviews/dossier_phase0_v7i.pdf`,
+`dossier_multan_v7i.pdf`, `docs/decisions.md`).** Fixes that are wrong under any reading, validated on training/selection
+data and re-checked on the test sets as **v7k** (same models as v7i):
+1. *Lethal-rhythm gate* (`ecg_measure.lethal_plausible`, Dart `lethalPlausible`): the VT/VF/asystole model fired on 2
+   Phase 0 photos (SVT at 158/min called "VF"; a 67/min strip called "asystole"), 4 selection traces and 24 Multan prints
+   (regular narrow tachycardias at 176–214/min). A call now has to agree with the beat detector: asystole needs ≤ 4
+   beats, a ≥ 2 s gap or a flat strip; VF needs a wide/unknown QRS and an irregular rhythm; VT a wide/unknown QRS and
+   rate ≥ 90. Digitized false lethal calls 30 → 2 of 1,580 (both one selection record with bizarre wide complexes);
+   held-out vfdb/cudb any-lethal sensitivity 0.998 → 0.76 (VF 0.95, VT 0.78, "asystole" windows 0.24 — those carry
+   agonal activity a printed flat line would not). `lethal_gate_check.py` documents gates A–F.
+2. *AV-block measurement guard*: a small PR sd (≤ 40 ms over ≥ 3 beats) means the extra "P" candidates are T waves of
+   a conducted rhythm. Clean 3AVB sensitivity unchanged (56 %), digitized Phase 0 normals flagged 3 → 1 of 60
+   (`avb_guard_check.py`; a T-zone exclusion was rejected: 3AVB 56 → 44 %).
+3. *Old infarct is not an emergency* (Homi): `train_classifier.label_vector` no longer counts an injury statement on a
+   ventricular aneurysm or a stadium II-III/III infarct as `st_elevation_injury` (319 → 290 positives), and
+   `hard_negative_weight` up-weights the acute-infarction loss on known-old infarcts (×3) and ischaemia-without-infarct
+   records (×2) — the patterns the classifier confused with acute injury. Fine-tune queued as `run_v7j.sh`
+   (homidev, ~10 min GPU) — **blocked: homidev's NVIDIA driver/library mismatch (needs a reboot)**.
+
+v7k vs v7i: Phase 0 identical for critical records; normals → URGENT 3 → 2 (photo) / 2 → 1 (scan); Multan unchanged
+(false alarms 7 %), abnormal-heartbeat prints CRITICAL 39 → 32 (the false VF/VT calls). Rate rules M6/M7 kept by Homi.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 

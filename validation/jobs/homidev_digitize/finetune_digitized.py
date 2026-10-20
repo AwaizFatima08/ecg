@@ -23,7 +23,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from train_classifier import DB, EcgNet, auc, label_vector, load, paper_view
+from train_classifier import DB, NAMES, EcgNet, auc, label_vector, load, paper_view, hard_negative_weight
 
 import os
 HERE = Path(__file__).resolve().parent
@@ -66,16 +66,19 @@ def main() -> int:
     df = pd.read_csv(DB / "ptbxl_database.csv", index_col="ecg_id")
     df["codes"] = df.scp_codes.apply(ast.literal_eval)
     Yall = {i: label_vector(c, s if isinstance(s, str) else "") for i, c, s in zip(df.index, df.codes, df.infarction_stadium1)}
+    Wall = {i: hard_negative_weight(c, s if isinstance(s, str) else "") for i, c, s in zip(df.index, df.codes, df.infarction_stadium1)}
+    HN = [NAMES.index("st_elevation_injury"), NAMES.index("acute_or_recent_mi")]
 
     man = list(csv.DictReader(open(WORK / "bulk_manifest.csv")))
-    Xd, Yd, split, ids = [], [], [], []
+    Xd, Yd, split, ids, Wd = [], [], [], [], []
     failed = 0
     for r in man:
         x = load_digitized(DIGI_DIR / f"{r['id']}_timeseries_canonical.csv")
         if x is None:
             failed += 1; continue
         Xd.append(x); Yd.append(Yall[int(r["ecg_id"])]); split.append(r["split"]); ids.append(int(r["ecg_id"]))
-    Xd, Yd, split = np.stack(Xd), np.stack(Yd), np.array(split)
+        Wd.append(Wall[int(r["ecg_id"])])
+    Xd, Yd, split, Wd = np.stack(Xd), np.stack(Yd), np.array(split), np.array(Wd, np.float32)
     np.savez_compressed(OUT / f"{TAG}_signals.npz", x=Xd.astype(np.float16), y=Yd, split=split, ecg_id=np.array(ids))
     print(f"digitized usable: {len(Xd)}  failed: {failed}", flush=True)
 
@@ -83,6 +86,7 @@ def main() -> int:
     clean_df = df[(df.strat_fold <= 8) & ~df.index.isin(held)]
     Xc = load(clean_df)
     Yc = np.stack([Yall[i] for i in clean_df.index])
+    Wc = np.array([Wall[i] for i in clean_df.index], np.float32)
 
     ck = torch.load(BASE_MODEL, map_location="cpu")
     names = ck["labels"]
@@ -90,9 +94,14 @@ def main() -> int:
     old_meta = {"thresholds": {}}
 
     tr, va = split == "train", split == "val"
-    Xt, Yt, Xv, Yv = Xd[tr], Yd[tr], Xd[va], Yd[va]
+    Xt, Yt, Xv, Yv, Wt = Xd[tr], Yd[tr], Xd[va], Yd[va], Wd[tr]
     pos = Yt.mean(0).clip(1e-3, None)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev))
+    bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev), reduction="none")
+
+    def loss_fn(logits, yb, wb):
+        # wb: per-sample hard-negative weight applied to the two acute-infarction columns only
+        w = torch.ones_like(logits); w[:, HN] = wb[:, None]
+        return (bce(logits, yb) * w).mean()
     opt = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-2)
     rng = np.random.default_rng(SEED)
     torch.manual_seed(SEED)
@@ -119,7 +128,8 @@ def main() -> int:
             idd, idc = pd_[s * half:(s + 1) * half], pc[s * half:(s + 1) * half]
             xb = np.concatenate([paper_view(Xt[idd], rng), paper_view(Xc[idc], rng)])
             yb = np.concatenate([Yt[idd], Yc[idc]])
-            loss = loss_fn(model(torch.from_numpy(xb).to(dev)), torch.from_numpy(yb).to(dev))
+            wb = np.concatenate([Wt[idd], Wc[idc]])
+            loss = loss_fn(model(torch.from_numpy(xb).to(dev)), torch.from_numpy(yb).to(dev), torch.from_numpy(wb).to(dev))
             opt.zero_grad(); loss.backward(); opt.step()
         m = macro(Yv, predict(Xv))
         print(f"epoch {ep + 1:2d}  digitized-val macro-AUC {m:.4f}  ({time.time() - t0:.0f}s)", flush=True)
