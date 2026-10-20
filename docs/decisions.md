@@ -38,6 +38,12 @@ Homi approved in chat, after the morning report on v7d:
 - **Threshold policy v4 (13 Oct 2026, afternoon, "agreed"):** ST depression (URGENT on its own) gets the cut-off with
   ≥ 90 % *specificity* on the digitized validation fold (0.32; Youden had fallen to 0.12 after the digitizer fix and
   drove most new false alarms). Set on validation data only, then checked on the test sets (v7i).
+- **21 Oct 2026 (adjudication, dossier v7i):** (1) rate rules **M6** (40–49/min → URGENT) and **M7** (AF/flutter ≥ 120/min
+  → URGENT) are kept; where they outrank PTB-XL's tier map, the app's tier is the reference (`ptbxl00611`, `00658`, `03842`,
+  `14792`, `03947`, `21675`). (2) **An old infarct is not an emergency**: Q waves / QS with persistent (aneurysmal) ST
+  elevation and no acute features is URGENT at most, never CRITICAL — applies to `ptbxl08624` and to the over-calls
+  `13556`, `05501`, `15858`, `07692`, `04576`, `14192`. Engine consequence: the "acute / recent infarction" and "ST
+  elevation" labels must not fire on old-infarct morphology; training targets will be re-mapped accordingly.
 These remain subject to the cardiologists' review before release (gate above).
 
 ## Decisions taken during the build (12 Oct 2026)
