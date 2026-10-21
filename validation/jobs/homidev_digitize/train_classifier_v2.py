@@ -66,10 +66,21 @@ CH21 = HERE / "data" / "challenge2021"
 BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006"}
 
 
+# SNOMED "ST elevation" (164930006) is a morphology statement that includes early repolarisation; Georgia-trained v8
+# became less sensitive to real infarcts (22 Oct 2026). It counts as acute injury only when an ischaemia / T-wave /
+# infarct statement co-occurs; otherwise the record is a (benign) negative for the injury label.
+STE_CODE = "164930006"
+STE_CONTEXT = {"429622005", "428750005", "164934002", "59931005", "425623009", "425419005", "426434006",
+               "164865005", "164917005", "57054005", "413444003", "54329005", "73795002", "164861001"}
+
+
 def arr_label_vector(codes: set[str]) -> np.ndarray | None:
     y = np.zeros(len(NAMES), np.float32)
     known = False
     for c in codes:
+        if c == STE_CODE and not (codes & STE_CONTEXT):
+            known = True  # ST elevation without ischaemic context: not injury (early-repolarisation-like negative)
+            continue
         for lab in SNOMED.get(c, []):
             y[NAMES.index(lab)] = 1.0
             known = True
