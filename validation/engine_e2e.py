@@ -98,6 +98,9 @@ def main() -> int:
     ap.add_argument("--model", default=str(HERE / "models" / "ecgnet.pt"), help="checkpoint, or comma-separated list for an ensemble")
     ap.add_argument("--no-rhythm", action="store_true", help="disable the lethal-rhythm (VT/VF/asystole) model")
     ap.add_argument("--meta", type=Path, default=HERE / "models" / "ecgnet_meta.json")
+    ap.add_argument("--alt-model", default="", help="second ensemble (comma-separated) used for --alt-labels")
+    ap.add_argument("--alt-meta", type=Path, default=None, help="thresholds for the --alt-labels (defaults to --meta)")
+    ap.add_argument("--alt-labels", default="", help="comma-separated labels whose probability/cut-off come from the alt ensemble")
     a = ap.parse_args()
 
     meta = json.load(open(a.meta))
@@ -107,7 +110,17 @@ def main() -> int:
         m_ = EcgNet(len(ck["labels"]), ck["width"])
         m_.load_state_dict(ck["state_dict"])
         models.append(m_.eval())
-    labels, thr = ck["labels"], meta["thresholds"]
+    labels, thr = ck["labels"], dict(meta["thresholds"])
+    alt_models, alt_idx = [], []
+    if a.alt_model:
+        for mp in a.alt_model.split(","):
+            ck2 = torch.load(mp, map_location="cpu")
+            m2 = EcgNet(len(ck2["labels"]), ck2["width"]); m2.load_state_dict(ck2["state_dict"]); alt_models.append(m2.eval())
+        alt_names = [n for n in a.alt_labels.split(",") if n]
+        alt_idx = [labels.index(n) for n in alt_names]
+        alt_thr = json.load(open(a.alt_meta))["thresholds"] if a.alt_meta else meta["thresholds"]
+        for n in alt_names:
+            thr[n] = alt_thr[n]
     rhythm_net = None
     if (HERE / "models" / "rhythm.pt").exists() and not a.no_rhythm:
         rk = torch.load(HERE / "models" / "rhythm.pt", map_location="cpu")
@@ -132,6 +145,9 @@ def main() -> int:
         with torch.no_grad():
             xin = torch.from_numpy(paper_view(x[None], None))
             p = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in models], 0)
+            if alt_models:
+                p2 = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in alt_models], 0)
+                p[alt_idx] = p2[alt_idx]
         m = measure(x)
         bpm = m.get("rate_bpm")
         regular = m.get("rr_regular")

@@ -231,6 +231,16 @@ dilutes rather than sharpens the injury concept. **The app keeps v7k.** Next: us
 non-infarction labels, or label Georgia's ST-elevation records as injury only when a T-wave/ischaemia code co-occurs.
 CPSC 2018 (ST depression, RBBB, AF) is still downloading.
 
+**v10 / v11 / v11h (22 Oct 2026, 01:54–03:00) — Georgia + CPSC, ST elevation = injury only with ischaemic context.**
+15,046 Challenge-2021 records in the base (66,611 train; val macro-AUC 0.960), 3 seeds fine-tuned (0.954–0.956). No
+watchdog stops with thermal pacing (CPU 50–66 C). v11 (v10 seeds): Phase 0 critical → CRITICAL 53/66, Multan MI
+18/30 unique, normal prints CRITICAL 0/142 — again more specific, again less sensitive. v11h (hybrid: infarction and
+ischaemia labels from the v7h seeds, everything else from v10): 60/66, 26/30, 4/142 — i.e. v7k. Per-label validation
+AUC (digitized PTB-XL fold) is *higher* for the Challenge-2021 models on almost every label (ST elevation 0.976 → 0.983),
+so the validation fold does not represent real paper ECGs for the infarction labels. **App keeps v7k.** The lever now
+is real-print data with reliable labels, not more digital ECGs. `engine_e2e.py --alt-model/--alt-labels` supports
+per-label ensembles.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
