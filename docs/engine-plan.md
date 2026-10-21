@@ -208,6 +208,29 @@ Verdict: on the test sets v7m is a wash against v7k (fewer over-calls on scans, 
 examples (290 in PTB-XL, 26 in the digitized validation fold), not the loss weighting — next step is more STEMI training
 data (`data/challenge2021` is present and untested) and Multan-style normal-variant anterior ST elevation as negatives.
 
+**v8 / v9 (22 Oct 2026, 00:05–01:45) — base classifier retrained with Challenge-2021 Georgia.** Georgia (10,202 records
+fetched from physionet.org at ~60 KB/s; no open-data mirror) adds 988 "ST elevation", 1,387 long-QT, 1,230 LVH records;
+three regional-ischaemia codes mapped to the ischaemia label. Base v3 = PTB-XL + ecg-arrhythmia + Georgia (61,570
+train, val macro-AUC 0.960), then 3 seeds fine-tuned on the v7h digitized signals (0.956/0.955/0.956; ensemble 0.958,
+best so far). Three watchdog stops on homidev (CPU package 84–88 C within seconds of load, idle 63 C — a cooling
+problem, reported to Homi); fixed by thermal pacing in the training loops and a two-consecutive-sample CPU rule.
+
+Scored against the **adjudicated reference** (Homi, 21 Oct) and per *unique* Multan print (30 MI, 142 normal):
+
+| | **v7k (app)** | v9 (v8 seeds) | v9b (v7h + v8, 6 seeds) |
+|---|---|---|---|
+| Phase 0 agreement (252 renders) | **70 %** | 67 % | 67 % |
+| Phase 0 critical → CRITICAL / ≥ URGENT (of 66) | **59** / 61 | 54 / 62 | 58 / 61 |
+| Phase 0 over-calls / under-calls | 56 / 19 | 63 / 20 | 63 / 20 |
+| Multan MI prints ≥ URGENT (of 30) | **26** | 22 | 24 |
+| Multan normal prints ≥ URGENT / CRITICAL (of 142) | 10 / 4 | **7 / 1** | 7 / 1 |
+
+Georgia makes the model more *specific* (normal prints falsely CRITICAL 4 → 1) but less *sensitive* to real-print
+infarcts (26 → 22 of 30). Georgia's "ST elevation" is a morphology statement that includes early repolarisation, so it
+dilutes rather than sharpens the injury concept. **The app keeps v7k.** Next: use the Georgia-trained base only for the
+non-infarction labels, or label Georgia's ST-elevation records as injury only when a T-wave/ischaemia code co-occurs.
+CPSC 2018 (ST depression, RBBB, AF) is still downloading.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
