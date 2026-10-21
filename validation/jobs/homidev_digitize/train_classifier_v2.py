@@ -61,6 +61,64 @@ SNOMED = {
 }
 # Challenge-2021 (Georgia + CPSC 2018 + CPSC extra; CC BY 4.0) — same WFDB layout and SNOMED "Dx:" comments as ecg-arrhythmia.
 CH21 = HERE / "data" / "challenge2021"
+# ACS-Chongqing (Du et al., Sci Data 2026, CC0): 19,955 angiography-confirmed ECGs, WFDB 500 Hz 10 s, labels in CSV/*.csv.
+ACS = HERE / "data" / "acs_chongqing"
+# SPH (Liu et al., Sci Data 2022, CC0): 25,770 ECGs, HDF5 "ecg" (12, N) mV at 500 Hz, AHA statements "code;code+modifier".
+SPH = HERE / "data" / "sph"
+UNKNOWN = -1.0  # label value for "not assessed by this dataset" (masked out of the loss)
+SPH_MAP = {  # AHA code -> our label; modifiers: 332 Old, 362 Depression, 363 Elevation, 346 rapid ventricular response
+    "1": ["normal"], "30": ["pacs"], "31": ["pacs"], "50": ["atrial_fibrillation"], "51": ["atrial_flutter"], "54": ["svt"],
+    "60": ["pvcs"], "82": ["first_degree_av_block"], "83": ["second_or_third_degree_av_block"],
+    "84": ["second_or_third_degree_av_block"], "85": ["second_or_third_degree_av_block"],
+    "86": ["second_or_third_degree_av_block"], "88": ["second_or_third_degree_av_block"],
+    "101": ["left_anterior_fascicular_block"], "104": ["lbbb"], "106": ["rbbb"], "108": ["wpw_preexcitation"],
+    "125": ["low_voltage"], "142": ["lvh"], "143": ["rvh"], "146": ["st_depression_ischaemia"], "147": ["t_wave_abnormality"],
+    "148": ["long_qt"], "153": ["t_wave_abnormality"], "160": ["old_mi_q_waves"], "161": ["old_mi_q_waves"],
+    "162": ["old_mi_q_waves"], "163": ["old_mi_q_waves"], "164": ["old_mi_q_waves"], "165": ["old_mi_q_waves"],
+    "166": ["old_mi_q_waves"], "167": ["old_mi_q_waves"],
+}
+SPH_MI = {"160", "161", "162", "163", "164", "165", "166", "167"}
+
+
+def sph_label_vector(aha: str) -> np.ndarray:
+    """AHA statements -> full label vector (SPH statements are comprehensive, so absent = negative). ST deviation (145)
+    with the Depression modifier -> ischaemia label; with Elevation -> injury only if an MI statement co-occurs
+    (Homi 21 Oct: old infarct / early repolarisation are not emergencies)."""
+    y = np.zeros(len(NAMES), np.float32)
+    stmts = [st.strip() for st in aha.replace(",", ";").split(";") if st.strip()]
+    codes = {st.split("+")[0] for st in stmts}
+    for st in stmts:
+        parts = st.split("+"); code, mods = parts[0], set(parts[1:])
+        for lab in SPH_MAP.get(code, []):
+            y[NAMES.index(lab)] = 1.0
+        if code == "145":
+            if "362" in mods:
+                y[NAMES.index("st_depression_ischaemia")] = 1.0
+            if "363" in mods and codes & SPH_MI:
+                y[NAMES.index("st_elevation_injury")] = 1.0
+    return y
+
+
+def acs_label_vector(r: dict) -> np.ndarray:
+    """ACS-Chongqing CSV row -> label vector with UNKNOWN for everything the dataset does not assess. STEMI -> injury +
+    acute MI; OMI (occlusion MI) -> acute MI; NSTEMI / UA -> acute MI unknown (the ECG need not show it), injury 0 only
+    for UA; non-ACS (angiography-negative) -> injury 0, acute 0; paced flag -> paced_rhythm."""
+    y = np.full(len(NAMES), UNKNOWN, np.float32)
+    r = {k.strip().lstrip("\ufeff").upper(): (v or "").strip() for k, v in r.items() if k}
+    stemi, nstemi, ua, omi = (r.get("STEMI") == "1", r.get("NSTEMI") == "1", r.get("UA") == "1", r.get("OMI") == "1")
+    i, a = NAMES.index("st_elevation_injury"), NAMES.index("acute_or_recent_mi")
+    if stemi:
+        y[i] = 1.0; y[a] = 1.0
+    elif omi:
+        y[a] = 1.0
+    elif nstemi:
+        y[a] = UNKNOWN; y[i] = UNKNOWN
+    elif ua:
+        y[i] = 0.0
+    else:  # angiography-negative
+        y[i] = 0.0; y[a] = 0.0
+    y[NAMES.index("paced_rhythm")] = 1.0 if r.get("PACED") == "1" else 0.0
+    return y
 # Rate-only rhythm statements (sinus brady/tachy, sinus arrhythmia), rotations and early repolarisation do not change the
 # morphology the classifier learns; rate is measured separately. A record with only these (+ SR) counts as "normal".
 BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006"}
@@ -140,7 +198,7 @@ def build_cache() -> None:
     print(f"ecg-arrhythmia: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
     # --- Challenge-2021 subsets present on disk (500 Hz -> 100 Hz, first 10 s) ---
     n0, skipped = len(X), 0
-    for sub in ("georgia", "cpsc_2018", "cpsc_2018_extra"):
+    for sub in ("georgia", "cpsc_2018", "cpsc_2018_extra") if os.environ.get("INCLUDE_CH21", "1") != "0" else ():
         for mat in sorted((CH21 / sub).rglob("*.mat")) if (CH21 / sub).exists() else []:
             rel = str(mat.with_suffix(""))
             try:
@@ -169,6 +227,49 @@ def build_cache() -> None:
             h = int(hashlib.md5(mat.name.encode()).hexdigest()[:8], 16) % 100
             split.append("test" if h < 5 else "val" if h < 10 else "train")
     print(f"challenge-2021: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
+    # --- ACS-Chongqing (CC0): WFDB 500 Hz, labels from CSV; its own train/test split is kept (test -> our test) ---
+    n0, skipped = len(X), 0
+    if (ACS / "CSV").exists():
+        for csvname, sp in (("train.csv", "train"),):  # test.csv carries no labels (withheld benchmark set)
+            for r in csv.DictReader(open(ACS / "CSV" / csvname, encoding="utf-8-sig")):
+                rk = {k.strip().upper(): v.strip() for k, v in r.items() if k}
+                rel = next((p for p in ACS.rglob(rk["ECG_ROW_RECORD"])), None)
+                if rel is None:
+                    skipped += 1; continue
+                try:
+                    rec = wfdb.rdrecord(str(rel.with_suffix("")))
+                except Exception:
+                    skipped += 1; continue
+                names = [s.upper() for s in rec.sig_name]
+                if rec.fs != 500 or rec.sig_len < 5000 or any(l not in names for l in LEADS):
+                    skipped += 1; continue
+                sig = resample_poly(np.nan_to_num(rec.p_signal)[:5000, [names.index(l) for l in LEADS]], 1, 5, axis=0)[:1000]
+                if sig.shape[0] < 1000 or not np.isfinite(sig).all():
+                    skipped += 1; continue
+                X.append(sig.T.astype(np.float16)); Y.append(acs_label_vector(r)); src.append("acs")
+                h = int(hashlib.md5(rk["PATIENT_ID"].encode()).hexdigest()[:8], 16) % 100
+                split.append("test" if h < 5 else "val" if h < 10 else "train")
+    print(f"acs-chongqing: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
+    # --- SPH (CC0): HDF5 mV at 500 Hz, first 10 s; AHA statements ---
+    n0, skipped = len(X), 0
+    if (SPH / "metadata.csv").exists():
+        import h5py
+        for r in csv.DictReader(open(SPH / "metadata.csv")):
+            f = SPH / "records" / f"{r['ECG_ID']}.h5"
+            try:
+                with h5py.File(f) as hf:
+                    x = hf["ecg"][:, :5000].astype(np.float32)
+            except Exception:
+                skipped += 1; continue
+            if x.shape != (12, 5000):
+                skipped += 1; continue
+            sig = resample_poly(x.T, 1, 5, axis=0)[:1000]
+            if sig.shape[0] < 1000 or not np.isfinite(sig).all():
+                skipped += 1; continue
+            X.append(sig.T.astype(np.float16)); Y.append(sph_label_vector(r["AHA_Code"])); src.append("sph")
+            h = int(hashlib.md5(r["Patient_ID"].encode()).hexdigest()[:8], 16) % 100
+            split.append("test" if h < 5 else "val" if h < 10 else "train")
+    print(f"sph: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
     CACHE.parent.mkdir(exist_ok=True)
     np.savez(CACHE, x=np.stack(X), y=np.stack(Y), src=np.array(src), split=np.array(split))
     print("cache:", CACHE, np.stack(X).shape, flush=True)
@@ -212,11 +313,18 @@ def main() -> int:
     X, Y, src, split = d["x"], d["y"], d["src"], d["split"]
     tr, va, te = split == "train", split == "val", split == "test"
     print(f"train {tr.sum()}  val {va.sum()}  test {te.sum()}  (device {dev})", flush=True)
-    print("train positives:", {n: int(Y[tr][:, k].sum()) for k, n in enumerate(NAMES)}, flush=True)
+    print("train positives:", {n: int((Y[tr][:, k] == 1).sum()) for k, n in enumerate(NAMES)}, flush=True)
+    print("sources:", {s_: int((src[tr] == s_).sum()) for s_ in np.unique(src)}, flush=True)
 
     model = EcgNet(len(NAMES), a.width).to(dev)
-    pos = Y[tr].mean(0).clip(1e-4, None)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev))
+    known = Y[tr] >= 0
+    pos = np.where(known, Y[tr], 0).sum(0) / known.sum(0).clip(1, None)
+    pos = pos.clip(1e-4, None)
+    bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(np.sqrt((1 - pos) / pos), dtype=torch.float32, device=dev), reduction="none")
+
+    def loss_fn(logits, yb):  # UNKNOWN (-1) labels are masked out of the loss
+        m = (yb >= 0).float()
+        return (bce(logits, yb.clamp(min=0)) * m).sum() / m.sum().clamp(min=1)
     opt = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=1e-2)
     steps = int(a.epochs * (int(tr.sum()) // a.batch + 1))
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-3, total_steps=steps)
@@ -247,7 +355,7 @@ def main() -> int:
             if (i // a.batch) % 25 == 0:
                 thermal_pause()
         pv = predict(va)
-        m = float(np.nanmean([auc(Y[va][:, k], pv[:, k]) for k in range(len(NAMES))]))
+        m = float(np.nanmean([auc(Y[va][:, k][Y[va][:, k] >= 0], pv[:, k][Y[va][:, k] >= 0]) for k in range(len(NAMES))]))
         print(f"epoch {ep + 1:2d}  loss {tl / len(perm):.4f}  val macro-AUC {m:.4f}  ({time.time() - t0:.0f}s)", flush=True)
         if m > best:
             best, best_state = m, {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
@@ -260,7 +368,8 @@ def main() -> int:
              f"train {tr.sum()}, val {va.sum()}, test {te.sum()}; width {a.width}; val macro-AUC {best:.4f}", "",
              "| label | test positives | AUC |", "|---|---|---|"]
     for k, n in enumerate(NAMES):
-        lines.append(f"| {n} | {int(Y[te][:, k].sum())} | {auc(Y[te][:, k], pt[:, k]):.3f} |")
+        kk = Y[te][:, k] >= 0
+        lines.append(f"| {n} | {int((Y[te][:, k] == 1).sum())} | {auc(Y[te][:, k][kk], pt[:, k][kk]):.3f} |")
     (out / "classifier_v2_report.md").write_text("\n".join(lines) + "\n")
     json.dump({"labels": NAMES, "width": a.width, "val_macro_auc": best}, open(out / "ecgnet_v2_meta.json", "w"), indent=1)
     print("\n".join(lines), flush=True)
