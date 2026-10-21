@@ -1,0 +1,85 @@
+# Phase 0 results — engine-v9
+
+- Images scored: 252  (records: 126)
+- Model(s): engine-v9 ×252
+- Prompt version(s): engine-v9
+- Source: PTB-XL 1.0.3 (PhysioNet, CC-BY 4.0), rendered as paper ECGs (`render_ptbxl_to_images.py`).
+- Expected tiers come from PTB-XL labels mapped in `render_ptbxl_to_images.py` and are themselves a proposal for Homi to review.
+- **Not covered by PTB-XL:** VT/VF, asystole, hyperkalaemia, Brugada, torsades. These need other sources before the CRITICAL list is signed off.
+
+
+### Variant: `photo` (126 images)
+
+**1. CRITICAL sensitivity** (expected CRITICAL → got CRITICAL)
+
+- All critical: 29/36 (81%)
+- Complete heart block (3AVB): 12/14 (86%)
+- ST-elevation injury (INJ*/STE_): 15/18 (83%)
+- Acute MI (Stadium I): 3/6 (50%)
+- Critical read as at least URGENT: 34/36 (94%)
+- **Missed (below URGENT):** ptbxl07835 → ABNORMAL, ptbxl08611 → ABNORMAL
+
+**2. False alerts on normal ECGs**
+
+- Normal → URGENT/CRITICAL (false alarm): 1/30 (3%)
+- Normal → ABNORMAL (over-call): 21/30 (70%)
+- Normal → NO CRITICAL PATTERN (correct): 8/30 (27%)
+
+**3. Readability and errors**
+
+- UNREADABLE: 0/126 (0%)
+- ERROR (no reading): 0/126 (0%)
+- Time per reading: median 0.0 s, max 0.0 s
+
+**4. At least the expected tier**
+
+- CRITICAL: 29/36 (81%)
+- URGENT: 27/30 (90%)
+- ABNORMAL: 30/30 (100%)
+
+**Confusion (rows = expected from PTB-XL labels, columns = app tier)**
+
+| expected | CRITICAL | URGENT | ABNORMAL | NO_CRITICAL_PATTERN |
+|---|---|---|---|---|
+| CRITICAL | 29 | 5 | 2 | 0 |
+| URGENT | 7 | 20 | 3 | 0 |
+| ABNORMAL | 2 | 8 | 20 | 0 |
+| NO_CRITICAL_PATTERN | 0 | 1 | 21 | 8 |
+
+### Variant: `scan` (126 images)
+
+**1. CRITICAL sensitivity** (expected CRITICAL → got CRITICAL)
+
+- All critical: 28/36 (78%)
+- Complete heart block (3AVB): 11/14 (79%)
+- ST-elevation injury (INJ*/STE_): 15/18 (83%)
+- Acute MI (Stadium I): 2/6 (33%)
+- Critical read as at least URGENT: 32/36 (89%)
+- **Missed (below URGENT):** ptbxl08611 → ABNORMAL, ptbxl08624 → ABNORMAL, ptbxl18840 → ABNORMAL, ptbxl21243 → ABNORMAL
+
+**2. False alerts on normal ECGs**
+
+- Normal → URGENT/CRITICAL (false alarm): 0/30 (0%)
+- Normal → ABNORMAL (over-call): 15/30 (50%)
+- Normal → NO CRITICAL PATTERN (correct): 15/30 (50%)
+
+**3. Readability and errors**
+
+- UNREADABLE: 0/126 (0%)
+- ERROR (no reading): 0/126 (0%)
+- Time per reading: median 0.0 s, max 0.0 s
+
+**4. At least the expected tier**
+
+- CRITICAL: 28/36 (78%)
+- URGENT: 28/30 (93%)
+- ABNORMAL: 30/30 (100%)
+
+**Confusion (rows = expected from PTB-XL labels, columns = app tier)**
+
+| expected | CRITICAL | URGENT | ABNORMAL | NO_CRITICAL_PATTERN |
+|---|---|---|---|---|
+| CRITICAL | 28 | 4 | 4 | 0 |
+| URGENT | 8 | 20 | 2 | 0 |
+| ABNORMAL | 2 | 9 | 19 | 0 |
+| NO_CRITICAL_PATTERN | 0 | 0 | 15 | 15 |

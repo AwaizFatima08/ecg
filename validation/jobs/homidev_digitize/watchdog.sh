@@ -9,7 +9,10 @@ while pgrep -fa "$PAT" | grep -vE "watchdog.sh|run_night.sh" | grep -q .; do
   gt=${gpu%%,*}
   cpu=$(sensors 2>/dev/null | awk '/Package id 0/ {gsub(/[+°C]/,"",$4); print int($4)}')
   echo "$(date +%T) ramAvailGB=$avail gpu(temp,util,memMB)=$gpu cpuC=${cpu:-?} load=$(cut -d' ' -f1 /proc/loadavg)" >> "$LOG"
-  if [ "$avail" -lt 3 ] || [ "${gt:-0}" -gt 80 ] || [ "${cpu:-0}" -gt 80 ]; then
+  # CPU: two consecutive 30-s samples over 80 C (the package idles at ~63 C and single-sample spikes to 84-86 C
+  # killed three steps on 22 Oct 2026; crit is 100 C). RAM and GPU still trip on one sample.
+  if [ "${cpu:-0}" -gt 80 ]; then hot=$((hot + 1)); else hot=0; fi
+  if [ "$avail" -lt 3 ] || [ "${gt:-0}" -gt 80 ] || [ "$hot" -ge 2 ]; then
     echo "$(date +%T) WATCHDOG STOP: ramAvail=${avail}GB gpu=${gt}C cpu=${cpu}C" >> "$LOG"; pkill -f "$PAT"; exit 1
   fi
   sleep 30

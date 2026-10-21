@@ -17,6 +17,7 @@ import ast
 import csv
 import hashlib
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -33,7 +34,7 @@ from train_classifier import EcgNet, LABELS, MI_CODES, NAMES, ZERO_LIKELIHOOD_OK
 HERE = Path(__file__).resolve().parent
 PTB = HERE / "data" / "ptbxl"
 ARR = HERE / "data" / "ecg-arrhythmia"
-CACHE = HERE / "work" / "signals_v2.npz"
+CACHE = HERE / "work" / os.environ.get("CACHE_NAME", "signals_v2.npz")
 LEADS = ["I", "II", "III", "AVR", "AVL", "AVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 
 # SNOMED code -> our label(s). Codes shared by several dataset acronyms (e.g. 164909002 = LBBB and fascicular
@@ -55,7 +56,11 @@ SNOMED = {
     "284470004": ["pacs"], "251173003": ["pacs"],
     "74390002": ["wpw_preexcitation"], "195060002": ["wpw_preexcitation"],
     "111975006": ["long_qt"], "164873001": ["lvh"], "89792004": ["rvh"], "251146004": ["low_voltage"],
+    # Challenge-2021 Georgia codes (22 Oct 2026): regional ischaemia statements -> the ischaemia label
+    "425623009": ["st_depression_ischaemia"], "425419005": ["st_depression_ischaemia"], "426434006": ["st_depression_ischaemia"],
 }
+# Challenge-2021 (Georgia + CPSC 2018 + CPSC extra; CC BY 4.0) — same WFDB layout and SNOMED "Dx:" comments as ecg-arrhythmia.
+CH21 = HERE / "data" / "challenge2021"
 # Rate-only rhythm statements (sinus brady/tachy, sinus arrhythmia), rotations and early repolarisation do not change the
 # morphology the classifier learns; rate is measured separately. A record with only these (+ SR) counts as "normal".
 BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006"}
@@ -122,9 +127,61 @@ def build_cache() -> None:
         h = int(hashlib.md5(rel.encode()).hexdigest()[:8], 16) % 100
         split.append("test" if h < 5 else "val" if h < 10 else "train")
     print(f"ecg-arrhythmia: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
+    # --- Challenge-2021 subsets present on disk (500 Hz -> 100 Hz, first 10 s) ---
+    n0, skipped = len(X), 0
+    for sub in ("georgia", "cpsc_2018", "cpsc_2018_extra"):
+        for mat in sorted((CH21 / sub).rglob("*.mat")) if (CH21 / sub).exists() else []:
+            rel = str(mat.with_suffix(""))
+            try:
+                rec = wfdb.rdrecord(rel)
+            except Exception:
+                skipped += 1
+                continue
+            dx = next((c for c in rec.comments if c.startswith("Dx:")), "Dx:")
+            codes = {c.strip() for c in dx[3:].split(",") if c.strip()}
+            y = arr_label_vector(codes)
+            if y is None or rec.fs != 500 or rec.sig_len < 5000:
+                skipped += 1
+                continue
+            names = [s.upper() for s in rec.sig_name]
+            if any(l not in names for l in LEADS):
+                skipped += 1
+                continue
+            sig = np.nan_to_num(rec.p_signal)[:5000, [names.index(l) for l in LEADS]]
+            sig = resample_poly(sig, 1, 5, axis=0)[:1000]
+            if sig.shape[0] < 1000 or not np.isfinite(sig).all():
+                skipped += 1
+                continue
+            X.append(sig.T.astype(np.float16))
+            Y.append(y)
+            src.append("ch21")
+            h = int(hashlib.md5(mat.name.encode()).hexdigest()[:8], 16) % 100
+            split.append("test" if h < 5 else "val" if h < 10 else "train")
+    print(f"challenge-2021: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
     CACHE.parent.mkdir(exist_ok=True)
     np.savez(CACHE, x=np.stack(X), y=np.stack(Y), src=np.array(src), split=np.array(split))
     print("cache:", CACHE, np.stack(X).shape, flush=True)
+
+
+def cpu_temp() -> int:
+    import subprocess
+    try:
+        out = subprocess.run(["sensors"], capture_output=True, text=True, timeout=5).stdout
+        for line in out.splitlines():
+            if line.startswith("Package id 0"):
+                return int(float(line.split()[3].strip("+°C")))
+    except Exception:
+        pass
+    return 0
+
+
+def thermal_pause(hot: int = 74, cool: int = 66) -> None:
+    """homidev's CPU package idles at ~63 C and spikes past 80 C under augmentation load (watchdog limit 80 C, two
+    stops on 22 Oct 2026): pause the loop when it passes `hot` until it is back under `cool`."""
+    if cpu_temp() >= hot:
+        t0 = time.time()
+        while cpu_temp() > cool and time.time() - t0 < 600:
+            time.sleep(10)
 
 
 def main() -> int:
@@ -139,7 +196,7 @@ def main() -> int:
         if a.build_cache:
             return 0
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    torch.set_num_threads(8)
+    torch.set_num_threads(int(os.environ.get("TORCH_THREADS", "4")))  # 8 threads of CPU augmentation pushed the package to 83 C (22 Oct)
     d = np.load(CACHE)
     X, Y, src, split = d["x"], d["y"], d["src"], d["split"]
     tr, va, te = split == "train", split == "val", split == "test"
@@ -176,6 +233,8 @@ def main() -> int:
             loss = loss_fn(model(xb), torch.from_numpy(Y[b]).to(dev))
             opt.zero_grad(); loss.backward(); opt.step(); sched.step()
             tl += loss.item() * len(b)
+            if (i // a.batch) % 25 == 0:
+                thermal_pause()
         pv = predict(va)
         m = float(np.nanmean([auc(Y[va][:, k], pv[:, k]) for k in range(len(NAMES))]))
         print(f"epoch {ep + 1:2d}  loss {tl / len(perm):.4f}  val macro-AUC {m:.4f}  ({time.time() - t0:.0f}s)", flush=True)
@@ -184,7 +243,7 @@ def main() -> int:
     model.load_state_dict(best_state)
     out = HERE / "out"
     out.mkdir(exist_ok=True)
-    torch.save({"state_dict": best_state, "labels": NAMES, "width": a.width}, out / "ecgnet_v2.pt")
+    torch.save({"state_dict": best_state, "labels": NAMES, "width": a.width}, out / os.environ.get("OUT_NAME", "ecgnet_v2.pt"))
     pt = predict(te)
     lines = ["# Classifier v2 (PTB-XL + ecg-arrhythmia), held-out test", "",
              f"train {tr.sum()}, val {va.sum()}, test {te.sum()}; width {a.width}; val macro-AUC {best:.4f}", "",

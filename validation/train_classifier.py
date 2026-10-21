@@ -107,6 +107,12 @@ HARD_NEG, HARD_NEG_ISC = 3.0, 2.0
 def load(df: pd.DataFrame) -> np.ndarray:
     X = np.zeros((len(df), 12, 1000), np.float32)
     for i, f in enumerate(df.filename_lr):
+        if i % 2000 == 0:
+            try:
+                from train_classifier_v2 import thermal_pause  # homidev only; absent elsewhere
+                thermal_pause()
+            except Exception:
+                pass
         rec = wfdb.rdrecord(str(DB / f))
         names = [s.upper() for s in rec.sig_name]
         sig = np.nan_to_num(rec.p_signal)[:, [names.index(l) for l in LEADS]].T

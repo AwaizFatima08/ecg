@@ -23,6 +23,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
+from train_classifier_v2 import thermal_pause  # noqa: E402
 from train_classifier import DB, NAMES, EcgNet, auc, label_vector, load, paper_view, hard_negative_weight
 
 import os
@@ -62,6 +63,7 @@ def thresholds(names, Y, P, old):
 def main() -> int:
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     print("device:", dev, torch.cuda.get_device_name(0) if dev == "cuda" else "", flush=True)
+    thermal_pause(hot=70, cool=64)  # loading 17k PTB-XL records is CPU-heavy; start cool
     OUT.mkdir(exist_ok=True)
     df = pd.read_csv(DB / "ptbxl_database.csv", index_col="ecg_id")
     df["codes"] = df.scp_codes.apply(ast.literal_eval)
@@ -131,6 +133,8 @@ def main() -> int:
             wb = np.concatenate([Wt[idd], Wc[idc]])
             loss = loss_fn(model(torch.from_numpy(xb).to(dev)), torch.from_numpy(yb).to(dev), torch.from_numpy(wb).to(dev))
             opt.zero_grad(); loss.backward(); opt.step()
+            if s % 25 == 0:
+                thermal_pause()
         m = macro(Yv, predict(Xv))
         print(f"epoch {ep + 1:2d}  digitized-val macro-AUC {m:.4f}  ({time.time() - t0:.0f}s)", flush=True)
         if m > best:
