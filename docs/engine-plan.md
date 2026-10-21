@@ -184,6 +184,30 @@ data and re-checked on the test sets as **v7k** (same models as v7i):
 v7k vs v7i: Phase 0 identical for critical records; normals → URGENT 3 → 2 (photo) / 2 → 1 (scan); Multan unchanged
 (false alarms 7 %), abnormal-heartbeat prints CRITICAL 39 → 32 (the false VF/VT calls). Rate rules M6/M7 kept by Homi.
 
+**v7j / v7l / v7m (21 Oct 2026, 12:00–13:00) — hard-negative fine-tune, evaluated, NOT shipped.** `run_v7j.sh` on homidev
+(10 min, 5.9 GB VRAM): 3 seeds re-fine-tuned with the old-infarct label remap and the hard-negative weights; digitized-val
+macro-AUC 0.955/0.955/0.954 (unchanged), ensemble 0.956. ST-elevation head on the validation fold at equal sensitivity:
+specificity 92.8 → 95.1 % (cut 0.15) — a real but modest gain. Two findings:
+1. The "≥ 90 % sensitivity" cut-off rule is meaningless with 26 validation positives: it set the ST-elevation cut-off to
+   0.074 (**v7l**) and doubled URGENT → CRITICAL over-calls on Phase 0 (ischaemia records). **Policy v5**: critical labels
+   with < 50 validation positives take the 95 %-specificity point instead (ST elevation → 0.15) — **v7m**.
+2. The old-infarct over-calls only partly moved: `13556` now fires the *acute MI* head (0.44–0.66) instead of ST
+   elevation; `05501` (0.63) and `15858` (0.86–0.94) are unchanged — one fine-tune with 3× weights does not unlearn them.
+
+| | **v7k** (in app: v7h models, policy v4) | v7l (v7j, cut 0.074) | v7m (v7j, policy v5) |
+|---|---|---|---|
+| Phase 0 critical → CRITICAL, photo / scan (of 36) | 30 / 30 | 31 / 33 | 28 / 32 |
+| Phase 0 critical → ≥ URGENT | 32 / 32 | 34 / 33 | 32 / 32 |
+| Phase 0 URGENT-truth → CRITICAL (over-call) | 10 / 8 | 16 / 12 | 11 / 11 |
+| Phase 0 normals → ≥ URGENT | 2 / 1 | 2 / 1 | 2 / 1 |
+| Multan acute MI ≥ URGENT (CRITICAL) | 87 % (207) | 90 % (215) | 83 % (199) |
+| Multan normal false alarms | 7 % | 10 % | 8 % |
+
+Verdict: on the test sets v7m is a wash against v7k (fewer over-calls on scans, fewer catches on photos and Multan), so
+**the app keeps v7k**; the v7j seeds stay as a candidate (`models/v7j/`). The bottleneck is the number of acute-injury
+examples (290 in PTB-XL, 26 in the digitized validation fold), not the loss weighting — next step is more STEMI training
+data (`data/challenge2021` is present and untested) and Multan-style normal-variant anterior ST elevation as negatives.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 

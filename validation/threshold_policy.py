@@ -19,6 +19,10 @@ HIGH_SENS = {"st_elevation_injury", "acute_or_recent_mi", "atrial_fibrillation",
 HIGH_SPEC = {"st_depression_ischaemia"}
 DROP = {"nonspecific_ivcd"}
 MIN_POS, FLOOR, RARE_FIXED = 20, 0.05, 0.3
+# Policy v5 (21 Oct 2026): the ">= 90 % sensitivity" percentile is statistically meaningless below MIN_POS_SENS positives
+# (26 ST-elevation positives put the cut-off at 0.07 and doubled URGENT -> CRITICAL over-calls); such labels take the
+# 95 %-specificity point instead.
+MIN_POS_SENS, HIGH_SENS_SPEC = 50, 0.95
 
 
 def thresholds(labels, Y, P):
@@ -29,9 +33,12 @@ def thresholds(labels, Y, P):
             thr[n] = 2.0
         elif y.sum() < MIN_POS:
             thr[n] = RARE_FIXED
-        elif n in HIGH_SENS:
+        elif n in HIGH_SENS and y.sum() >= MIN_POS_SENS:
             s = np.sort(p[y == 1])
             thr[n] = max(FLOOR, float(s[int(0.1 * len(s))]))
+        elif n in HIGH_SENS:
+            s = np.sort(p[y == 0])
+            thr[n] = max(FLOOR, float(s[int(HIGH_SENS_SPEC * len(s))]))
         elif n in HIGH_SPEC:
             s = np.sort(p[y == 0])
             thr[n] = max(FLOOR, float(s[int(0.9 * len(s))]))
