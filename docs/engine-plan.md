@@ -241,6 +241,28 @@ so the validation fold does not represent real paper ECGs for the infarction lab
 is real-print data with reliable labels, not more digital ECGs. `engine_e2e.py --alt-model/--alt-labels` supports
 per-label ensembles.
 
+**v12 / v13 (22 Oct 2026, 03:30–04:20) — ACS-Chongqing + SPH: the first real gain on real prints. SHIPPED as v13.**
+Two CC0 datasets found in the non-profit search: ACS-Chongqing (Du et al., Sci Data 2026; 19,955 ECGs, every patient
+angiography-confirmed: 1,442 STEMI, 1,866 acute/occlusion MI, 15,282 angiography-negative; labels for the two
+infarction heads only, everything else masked as unknown) and SPH Shandong (Liu et al., Sci Data 2022; 25,770 ECGs with
+AHA statements — 13,905 normal, 2,086 ST depression, 675 AF, 115 2nd/3rd-degree block …). Base v5 = PTB-XL +
+ecg-arrhythmia + ACS + SPH (92,336 train; val macro-AUC 0.969), Challenge-2021 excluded; 3 seeds fine-tuned on the
+digitized renders (0.954–0.956; ensemble 0.957). Trainer now supports UNKNOWN (-1) labels masked out of the loss.
+
+| adjudicated reference / unique Multan prints | **v7k** | **v13** |
+|---|---|---|
+| Phase 0 agreement (252 renders) | 70 % | **72 %** |
+| Phase 0 critical → CRITICAL / ≥ URGENT (of 66) | 59 / 61 | 58 / **64** |
+| Phase 0 over-calls / under-calls | 56 / 19 | **50** / 20 |
+| Phase 0 normals → ≥ URGENT | 1 | 1 |
+| Multan MI ≥ URGENT (CRITICAL), of 30 | 26 (26) | **30 (29)** |
+| Multan normal ≥ URGENT (CRITICAL), of 142 | 10 (4) | **8 (3)** |
+| Multan abnormal-heartbeat ≥ ABNORMAL, of 233 | 228 | 218 |
+
+Angiography-confirmed infarction labels did what morphology labels (Georgia) could not: every Multan MI print is now
+caught, with fewer false alarms. App assets: `ecgnet_v2_s{1,2,3}.onnx` re-exported from the v12 seeds, cut-offs from
+`models/v12/ensemble3_meta_v5.json`. Open: the 10 abnormal-heartbeat prints that dropped to "no critical pattern".
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
