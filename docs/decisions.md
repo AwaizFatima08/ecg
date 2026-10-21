@@ -44,6 +44,11 @@ Homi approved in chat, after the morning report on v7d:
   elevation and no acute features is URGENT at most, never CRITICAL — applies to `ptbxl08624` and to the over-calls
   `13556`, `05501`, `15858`, `07692`, `04576`, `14192`. Engine consequence: the "acute / recent infarction" and "ST
   elevation" labels must not fire on old-infarct morphology; training targets will be re-mapped accordingly.
+- **21 Oct 2026 (adjudication, "go with the Claude tier"):** for every discrepancy in the two dossiers Homi adopted the
+  tier from Claude's read as the reference (`validation/adjudication.csv`, 55 Phase 0 records + 14 unique Multan
+  prints and their copies). Range reads were resolved with the two rules above (rate rules win; old infarct ≤ URGENT).
+  Phase 0 reference = PTB-XL tier map, overridden by `adjudication.csv`. This is Homi's self-review; the cardiologist
+  review gate still stands.
 These remain subject to the cardiologists' review before release (gate above).
 
 ## Decisions taken during the build (12 Oct 2026)

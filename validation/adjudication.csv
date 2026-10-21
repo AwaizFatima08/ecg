@@ -1,0 +1,108 @@
+set,id,reference_tier,claude_tier_text,source,note
+phase0,ptbxl04827,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,classifier borderline on the photo (infarction probability under the cut-off); AV-block measurement cannot work on an ir
+phase0,ptbxl07688,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,photo: AV-block measurement did not fire (lead II r 0.82) and the classifier AVB probability fell under the cut-off
+phase0,ptbxl11500,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,heart-block detection on a slow junctional rhythm with wide QRS: scan classifier AVB under cut-off and no measurable P–Q
+phase0,ptbxl15368,URGENT,URGENT–CRITICAL (depends on the 55/min rule and on whether the 3AVB code is right),Homi 21 Oct 2026: adopt Claude tier,photo: classifier AVB under cut-off; measurement found atrial > ventricular but rate 58 is above the 55/min 'slow' cut-o
+phase0,ptbxl21243,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,scan: measurement failure — QRS read as 40 ms on a wide complex and axis 'cannot assess' (onset/offset detection broke o
+phase0,ptbxl08624,URGENT,"URGENT or CRITICAL — if the ST elevation is aneurysmal (old) rather than acute, CRITICAL is arguable",Homi 21 Oct 2026: adopt Claude tier,"classifier miss of the ST-elevation pattern (both variants, only 'Q waves' fired)"
+phase0,ptbxl08611,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,classifier miss — subtle inferior ST elevation with reciprocal depression; ST-depression probability also under the 0.32
+phase0,ptbxl18840,URGENT,URGENT–CRITICAL (label debatable; early repolarisation vs early anterior injury),Homi 21 Oct 2026: adopt Claude tier,"classifier borderline (photo CRITICAL, scan ABNORMAL); the PTB-XL label itself is 50 % likelihood"
+phase0,ptbxl07835,CRITICAL,CRITICAL,Homi 21 Oct 2026: adopt Claude tier,photo: classifier miss (digitizer r 0.85 on the photo); scan correct
+phase0,ptbxl07889,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,photo: the LETHAL-RHYTHM model fired 'ventricular fibrillation' (P 0.85) on a clean SVT strip → CRITICAL. Serious false 
+phase0,ptbxl03947,URGENT,"ABNORMAL by PTB-XL, URGENT by rule M7",Homi 21 Oct 2026: adopt Claude tier,rule M7 (AF ≥ 120 → URGENT) plus ST depression; PTB-XL maps AF + RBBB to ABNORMAL. Rule-vs-reference question
+phase0,ptbxl01843,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,classifier false positive: the irregularity of sinus arrhythmia read as atrial ectopics
+phase0,ptbxl09702,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,classifier false positive LVH (scan only)
+phase0,ptbxl17891,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,safety net: no finding fired but the 'normal' probability was under its cut-off (athletic-looking normal)
+phase0,ptbxl02779,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,classifier false positive LAFB
+phase0,ptbxl02270,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false atrial ectopics (photo digitizer r 0.78)
+phase0,ptbxl03073,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false T-wave abnormality
+phase0,ptbxl19893,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,scan only: false T-wave abnormality
+phase0,ptbxl01946,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false atrial ectopics (photo r 0.79)
+phase0,ptbxl08688,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: safety net
+phase0,ptbxl18639,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,measurement false positive: AV-block check counted T waves as extra P waves (the known ~2 % false rate) → URGENT on both
+phase0,ptbxl15461,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,scan: PR measured 210 ms → first-degree AV block (borderline cut-off); photo: false LVH
+phase0,ptbxl09773,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false LVH
+phase0,ptbxl02935,ABNORMAL,NO_CRITICAL_PATTERN or ABNORMAL (T abnormality is real; PTB-XL still calls it normal),Homi 21 Oct 2026: adopt Claude tier,classifier false positive ST depression (still above the 0.32 cut-off) + T-wave abnormality → URGENT
+phase0,ptbxl03669,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,false T-wave abnormality (both variants)
+phase0,ptbxl20684,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN (if low voltage alone is not a finding),Homi 21 Oct 2026: adopt Claude tier,rules question: is 'low QRS voltage' alone an ABNORMAL finding or a note? PTB-XL treats it as normal
+phase0,ptbxl09589,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: AV-block measurement false positive → URGENT
+phase0,ptbxl13398,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,measurement failure: QRS read as 140 ms on a narrow complex (velocity onset/offset confused by the tiny limb-lead comple
+phase0,ptbxl03159,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false atrial ectopics
+phase0,ptbxl11575,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier,photo only: false low voltage
+phase0,ptbxl01186,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier,label probably wrong in PTB-XL (edited to IMI 50 % after coding); the app's ABNORMAL (Q waves) is defensible
+phase0,ptbxl13556,URGENT,URGENT (app CRITICAL); CRITICAL defensible only if the V2–V3 elevation is taken as acute,Homi 21 Oct 2026: adopt Claude tier,"over-call: classifier fired 'acute/recent infarction' on an old anteroseptal MI with LVH strain — ASMI + ISC_ coded, not"
+phase0,ptbxl03484,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,over-call: with LBBB the classifier's 'acute infarction' + ST elevation are secondary repolarisation changes (discordant
+phase0,ptbxl02221,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,under-call: classifier gave only Q waves/T abnormality; long QT not detected (QTc not measured on this trace: 'None')
+phase0,ptbxl10563,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,photo under-call: ST depression missed (scan caught it); digitizer photo r 0.82
+phase0,ptbxl05501,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,over-call: classifier 'ST elevation' on an old anteroseptal MI pattern → CRITICAL; label says old
+phase0,ptbxl02064,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,scan under-call (T inversion only → ABNORMAL) and photo over-call (false ST elevation → CRITICAL): classifier unstable o
+phase0,ptbxl15858,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,"over-call: classifier 'ST elevation' on an old infarct pattern with T inversion → CRITICAL; PTB-XL says ischaemia (ISC),"
+phase0,ptbxl13122,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,photo under-call: classifier switched to a false 'LBBB' (QRS 100) and dropped the ischaemia findings; photo r 0.84
+phase0,ptbxl07374,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,over-call: classifier fired 'ST elevation' (none visible) alongside the correct ST depression → CRITICAL
+phase0,ptbxl19164,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,over-call: classifier 'second/third-degree AV block' on AF → CRITICAL; also false 'paced rhythm'. PTB-XL's 2AVB code on 
+phase0,ptbxl10675,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,under-call: ST depression not fired (only T abnormality + low voltage) → ABNORMAL on both variants
+phase0,ptbxl10640,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,photo over-call: AV-block measurement fired ('possible second-degree AV block') on flat-T sinus rhythm → CRITICAL via th
+phase0,ptbxl21675,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,classifier 'second/third-degree AV block' on fast AF (impossible combination) → CRITICAL; rule M7 alone would give URGEN
+phase0,ptbxl07692,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier,over-call: classifier 'ST elevation' on an old inferior MI with T inversion → CRITICAL
+phase0,ptbxl13908,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier,"over-call: 'long QT' fired (QTc 325 measured — the classifier label, not the measurement) → URGENT; PVCs alone are ABNOR"
+phase0,ptbxl07756,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier,photo over-call: ST depression fired on the photo only → URGENT
+phase0,ptbxl00658,URGENT,"ABNORMAL by PTB-XL, URGENT by rule M6",Homi 21 Oct 2026: adopt Claude tier,rule M6 (rate 40–49 → URGENT); no finding needed. Rule-vs-reference question
+phase0,ptbxl14792,URGENT,"ABNORMAL by PTB-XL, URGENT by rule M7",Homi 21 Oct 2026: adopt Claude tier,rule M7 (Homi's rule: AF ≥ 120/min → URGENT); PTB-XL maps AF to ABNORMAL regardless of rate. Rule-vs-reference question
+phase0,ptbxl04576,URGENT,ABNORMAL–URGENT (ST depression present; PTB-XL coded STD_ at 0 %),Homi 21 Oct 2026: adopt Claude tier,scan over-call: classifier 'acute/recent infarction' on an old QS pattern → CRITICAL; photo ABNORMAL under-calls the ST 
+phase0,ptbxl09570,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier,photo: the LETHAL-RHYTHM model fired 'asystole' (P 0.62) on a 67/min strip → CRITICAL. Serious false positive; scan ABNO
+phase0,ptbxl03842,URGENT,"ABNORMAL by PTB-XL, URGENT by rule M6",Homi 21 Oct 2026: adopt Claude tier,rule M6 (rate 40–49 → URGENT). Rule-vs-reference question
+phase0,ptbxl14192,URGENT,ABNORMAL–URGENT (trifascicular pattern),Homi 21 Oct 2026: adopt Claude tier,over-call: classifier 'ST elevation' with RBBB secondary changes → CRITICAL; also note bifascicular block + 1st-degree =
+phase0,ptbxl00611,URGENT,"ABNORMAL by PTB-XL, URGENT by rule M6 — Homi to decide the bradycardia rule",Homi 21 Oct 2026: adopt Claude tier,rule M6 (Homi's rule: rate 40–49 → URGENT) fired; PTB-XL's tier map (NORM + sinus brady) says ABNORMAL. Not an engine er
+phase0,ptbxl15926,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier,over-call: AV-block measurement flag ('possible second-degree AV block') on both variants → URGENT; flat T waves confuse
+multan,mi_103,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_13,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_133,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_163,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_193,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_223,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_43,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_73,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_103),"dataset label 'MI' is patient-level; this print shows no acute pattern — the app's ABNORMAL (Q waves, ectopics, low volt"
+multan,mi_104,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_134,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_14,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_164,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_194,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_224,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_44,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_74,CRITICAL,URGENT–CRITICAL (acute anterior injury likely),Homi 21 Oct 2026: adopt Claude tier (print mi_104),classifier MISS: only 'LVH' fired; the hyperacute anterior T/ST pattern was not recognised
+multan,mi_112,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_142,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_172,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_202,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_22,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_232,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_52,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_82,URGENT,URGENT,Homi 21 Oct 2026: adopt Claude tier (print mi_112),under-call: ST elevation V2–V3 not fired; findings only Q waves/T/ectopics/LAFB → ABNORMAL
+multan,mi_115,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_145,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_175,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_205,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_235,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_25,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_55,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,mi_85,ABNORMAL,ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print mi_115),dataset 'MI' patient without an acute pattern on this print; ABNORMAL defensible
+multan,normal_118,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_118),classifier false ST depression → URGENT
+multan,normal_260,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_118),classifier false ST depression → URGENT
+multan,normal_136,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_136),AV-block measurement false positive ('possible second-degree AV block') → URGENT; T waves counted as P
+multan,normal_278,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_136),AV-block measurement false positive ('possible second-degree AV block') → URGENT; T waves counted as P
+multan,normal_147,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_147),classifier 'ST elevation' on normal-variant anterior J-point elevation → false CRITICAL; also a weak rhythm-strip digiti
+multan,normal_5,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_147),classifier 'ST elevation' on normal-variant anterior J-point elevation → false CRITICAL; also a weak rhythm-strip digiti
+multan,normal_148,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_148),classifier 'ST elevation' on a normal variant → false CRITICAL; rhythm strip is lead III (layout assumption broken)
+multan,normal_6,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_148),classifier 'ST elevation' on a normal variant → false CRITICAL; rhythm strip is lead III (layout assumption broken)
+multan,normal_149,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_149),classifier false ST depression → URGENT; strip is lead III
+multan,normal_7,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_149),classifier false ST depression → URGENT; strip is lead III
+multan,normal_194,ABNORMAL,ABNORMAL at most,Homi 21 Oct 2026: adopt Claude tier (print normal_194),classifier 'ST elevation' → CRITICAL on what looks like LVH/normal-variant anterior changes; dataset says normal patient
+multan,normal_52,ABNORMAL,ABNORMAL at most,Homi 21 Oct 2026: adopt Claude tier (print normal_194),classifier 'ST elevation' → CRITICAL on what looks like LVH/normal-variant anterior changes; dataset says normal patient
+multan,normal_195,URGENT,URGENT by rule M6 (kept),Homi 21 Oct 2026: adopt Claude tier (print normal_195),"rule M6 (40–49/min → URGENT) — rule vs dataset label, not an engine error"
+multan,normal_53,URGENT,URGENT by rule M6 (kept),Homi 21 Oct 2026: adopt Claude tier (print normal_195),"rule M6 (40–49/min → URGENT) — rule vs dataset label, not an engine error"
+multan,normal_198,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_198),AV-block measurement false positive → URGENT
+multan,normal_56,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_198),AV-block measurement false positive → URGENT
+multan,normal_213,ABNORMAL,NO_CRITICAL_PATTERN–ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print normal_213),classifier false ST depression → URGENT (and the classifier is clearly unsettled by anterior normal-variant elevation)
+multan,normal_71,ABNORMAL,NO_CRITICAL_PATTERN–ABNORMAL,Homi 21 Oct 2026: adopt Claude tier (print normal_213),classifier false ST depression → URGENT (and the classifier is clearly unsettled by anterior normal-variant elevation)
+multan,normal_217,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_217),classifier 'ST elevation' on normal-variant anterior J-point elevation → false CRITICAL
+multan,normal_75,NO_CRITICAL_PATTERN,NO_CRITICAL_PATTERN,Homi 21 Oct 2026: adopt Claude tier (print normal_217),classifier 'ST elevation' on normal-variant anterior J-point elevation → false CRITICAL
