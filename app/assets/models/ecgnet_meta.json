@@ -45,7 +45,7 @@
   "long_qt": 0.3,
   "lvh": 0.0618988461792469,
   "rvh": 0.3,
-  "paced_rhythm": 0.087514728307724,
+  "paced_rhythm": 0.3,
   "low_voltage": 0.3,
   "normal": 0.43797561526298523
  },
@@ -54,9 +54,9 @@
   "ecgnet_v2_s2.onnx",
   "ecgnet_v2_s3.onnx"
  ],
- "policy": "v5 (21 Oct 2026): critical labels >= 90 % sensitivity when >= 50 val positives, else 95 %-specificity point; ST depression at >= 90 % specificity; rare labels 0.3; floor 0.05",
+ "policy": " + v7: paced_rhythm floored at 0.3 (29 val positives; false paced calls on real prints)",
  "ensemble_val_macro_auc": 0.9565986460852798,
  "trained_on": "base v5: PTB-XL + ecg-arrhythmia (Chapman/Ningbo) + ACS-Chongqing (CC0) + SPH Shandong (CC0); 3 seeds fine-tuned on student-digitized PTB-XL renders (v12, 22 Oct 2026)",
  "input": "(1,13,1000): 12 leads mV at 100 Hz in 3x4 print view + visibility channel",
- "source": "models/v12/ensemble3_meta_v5.json"
+ "source": "models/v12/ensemble3_meta_v7.json"
 }

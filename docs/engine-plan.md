@@ -287,6 +287,19 @@ Remaining old-MI false CRITICALs (42): 20 have no measurable ST elevation at all
 Q waves + T inversion); a rule on that would hurt true injury, so this needs training signal — the ACS "old MI" cases
 are not labelled as such, SPH has 243 "Old" statements (used).
 
+**v13c (22 Oct 2026, evening) — layouts, strip-aware engine, paced floor. SHIPPED as v1.0.0+3.** Homi's 8 web images
+(400–530 px; anterior 1–2, lateral 3–4, posterior 5–6, inferior 7–8) exposed three layout failures: 12×1 stacked leads
+(#1, misread as 3×4), 3×4 without a rhythm strip (#5, digitizer failure) and 3×4 + three strips (#8, rows mis-assigned
+→ false VF). The digitizer now detects the layout from the number of trace rows (3 / 4 / 6 / 12; anything else is
+refused as "unsupported layout"); Phase 0 output is bit-identical (252/252) and Dart parity holds on 9 vectors incl.
+the new layouts. Without a 10 s strip the engine masks lead II to its 2.5 s column for the classifier (digitized-val AUC
+within 0.01 on every major label), takes rate/intervals from that window, and skips the lethal-rhythm and AV-block
+checks (noted in the reading). The lethal class must now also beat "other" (a 0.49/0.49 tie on a faint image produced
+a false VF). Web images: 5/8 → 7/8 CRITICAL; #1 (12×1 thumbnail) still missed — needs a real print to judge.
+Threshold policy v7: `paced_rhythm` floored at 0.3 (29 val positives; Youden 0.088 fired on 3 of the 8 web images with
+no pacing). Flooring all rare non-critical labels (v13f) was tried: over-calls 50 → 45 but abnormal-heartbeat prints
+≥ ABNORMAL 218 → 209, so not adopted. Test-set numbers unchanged from v13b.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
