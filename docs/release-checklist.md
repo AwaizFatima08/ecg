@@ -36,8 +36,8 @@ Work through these **in order**. The app is not releasable until every box in se
 - [x] Privacy policy hosted at https://medicalapps.homilabs.org/ecg-reader/privacy/ (app default; source in /mnt/storage/projects/medicalapps_site)
 - [ ] Final app name (D7) and icon
 - [x] Bump `version:` in `app/pubspec.yaml` (1.0.0+2, 22 Oct 2026)
-- [ ] `flutter build appbundle --release`
-- [ ] Install from the internal test track on the Mi 9 Lite and Galaxy A12; run the manual test list below
+- [x] `flutter build appbundle --release` — 22 Oct 2026, v1.0.0+2 (engine v13b): `dist/ecg-reader-1.0.0+2.aab` (134.5 MB) and `dist/ecg-reader-1.0.0+2-arm64-release.apk` (94 MB), signed with the HomiLabs key (SHA-256 eb29…cd12)
+- [~] Release APK installed fresh on the Oppo Reno 14F (22 Oct): disclaimer with both boxes, gallery → crop → quality warning on a blurred image → reading CRITICAL in 9 s, no image files left in app storage; A12 / Mi 9 Lite pending
 
 ## D. Play Console
 - [ ] Health apps declaration: clinician decision support; not a medical device claim; no patient-facing use
