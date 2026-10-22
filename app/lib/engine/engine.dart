@@ -57,7 +57,7 @@ class EngineException implements Exception {
 /// Builds the structured reading from the digitized signal, measurements, classifier output and
 /// (optionally) the lethal-rhythm check. Same logic as validation/engine_e2e.py.
 Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<String, double> thr,
-    [RhythmResult? rhythmCheck, StMorphology? stm]) {
+    [RhythmResult? rhythmCheck, StMorphology? stm, bool noStrip = false]) {
   final bpm = m.rateBpm;
   final regular = m.rrRegular;
   final rconf = bpm != null && regular == true ? 0.8 : (bpm != null ? 0.6 : 0.0);
@@ -105,7 +105,7 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
   // [Homi approved 13 Oct 2026] a slow (< 55), regular ventricular rhythm with more P waves than QRS is a high-grade /
   // complete block even when the classifier also calls AF, provided the P waves are regular (fibrillatory waves are not);
   // the AF call only suppresses the faster, second-degree case. Same logic as engine_e2e.py.
-  if (m.avBlockSuspected && (!afLike || (slow && m.atriaRegular == true))) {
+  if (m.avBlockSuspected && !noStrip && (!afLike || (slow && m.atriaRegular == true))) {
     // [Homi approved 13 Oct 2026] a slow ventricular rate (< 55) makes a high-grade/complete block likely -> CRITICAL.
     findings.add({
       'code': slow ? 'high_grade_av_block' : 'second_degree_av_block_mobitz2',
@@ -164,8 +164,21 @@ Map<String, dynamic> unreadableReading(String why) => {
 Map<String, Object?> _digitizeAndMeasure((Map2D, Map2D) maps) {
   final res = postprocess(maps.$1, maps.$2);
   if (res.leads == null) return {'error': res.error};
+  // 3x4 print without a lead II rhythm strip: lead II holds only its 2.5 s column (engine_e2e.py no_strip)
+  final lead2 = res.leads![1];
+  var nanII = 0;
+  for (final v in lead2) {
+    if (v.isNaN) nanII++;
+  }
+  final noStrip = nanII > lead2.length ~/ 2;
   final x = fillGaps(res.leads!);
-  return {'x': x, 'm': measure(x), 'stm': stMorphology(x)};
+  if (noStrip) {
+    for (var i = 250; i < 1000; i++) {
+      x[1][i] = 0.0; // blank the padded part so the classifier does not see a flat line
+    }
+  }
+  final xm = noStrip ? [x[0], [for (var k = 0; k < 4; k++) ...x[1].sublist(0, 250)], ...x.sublist(2)] : x;
+  return {'x': x, 'm': measure(xm), 'stm': stMorphology(xm), 'noStrip': noStrip};
 }
 
 class EcgEngine {
@@ -203,10 +216,17 @@ class EcgEngine {
       final x = dm['x'] as List<List<double>>;
       final p = await _clf!.predict(x);
       final m = dm['m'] as Measurements;
-      RhythmResult? rc = await _rhythm!.predict(x[1]);
-      // lethal-rhythm gate (21 Oct 2026): drop a VT/VF/asystole call the beat detector contradicts
-      if (rc.pLethal >= 0.5 && !lethalPlausible(x[1], rc.lethalClass, m.qrsMs)) rc = null;
-      reading = buildReading(m, p, _clf!.thresholds, rc, dm['stm'] as StMorphology?);
+      final noStrip = dm['noStrip'] as bool;
+      RhythmResult? rc = noStrip ? null : await _rhythm!.predict(x[1]); // the lethal-rhythm model needs the 10 s strip
+      // lethal-rhythm gate (21 Oct 2026): the lethal class must beat "other" and the beat detector must not contradict it
+      if (rc != null && rc.pLethal >= 0.5 &&
+          (rc.probs[rc.classes.indexOf(rc.lethalClass)] <= rc.probs[0] || !lethalPlausible(x[1], rc.lethalClass, m.qrsMs))) {
+        rc = null;
+      }
+      reading = buildReading(m, p, _clf!.thresholds, rc, dm['stm'] as StMorphology?, noStrip);
+      if (noStrip) {
+        reading['model_notes'] = '${reading['model_notes']} No lead II rhythm strip on this print: rhythm checks limited to 2.5 s.';
+      }
     }
     final ev = evaluateEcg(reading);
     return EcgResult.fromResponse({

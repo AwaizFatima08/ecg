@@ -271,16 +271,37 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
 
   final prof = gaussianSmooth(sig.rowSums(), math.max(1.0, 2.5 * ppm));
   final profMax = prof.reduce(math.max);
-  var pk = findPeaks(prof, distance: math.max(3, (15 * ppm).toInt()), prominence: profMax * 0.05);
-  if (pk.length < 4) return DigitizeResult(null, info, 'found ${pk.length} rows, need 4');
-  final byProm = [...pk]..sort((a, b) => peakProminence(prof, a).compareTo(peakProminence(prof, b)));
-  pk = byProm.sublist(byProm.length - 4)..sort();
+  var pk = findPeaks(prof, distance: math.max(3, (8 * ppm).toInt()), prominence: profMax * 0.05);
+  // Layout from the number of trace rows (lite_digitizer.postprocess): 4 = 3x4 + lead II strip, 3 = 3x4 without a
+  // strip, 6 = 3x4 + three strips (strips ignored), 12 = 12x1 stacked leads. Faint extra rows are dropped at 35 %.
+  final strong = [for (final p in pk) if (peakProminence(prof, p) >= profMax * 0.35) p];
+  pk = ([3, 4, 6, 12].contains(strong.length) ? strong : pk)..sort();
+  final n = pk.length;
+  late final String layout;
+  late final List<int> rows;
+  int? stripIdx;
+  if (n == 4) {
+    layout = '3x4+1'; rows = [0, 1, 2]; stripIdx = 3;
+  } else if (n == 3) {
+    layout = '3x4'; rows = [0, 1, 2];
+  } else if (n == 6) {
+    layout = '3x4+3'; rows = [0, 1, 2];
+  } else if (n == 12) {
+    layout = '12x1'; rows = [for (var i = 0; i < 12; i++) i];
+  } else {
+    info['rows_found'] = n;
+    return DigitizeResult(null, info, 'unsupported layout: found $n trace rows');
+  }
+  info['layout'] = layout;
   info['rows_y'] = pk;
-  final bounds = [0, for (var i = 0; i < 3; i++) (pk[i] + pk[i + 1]) ~/ 2, h];
+  final mids = [for (var i = 0; i < n - 1; i++) (pk[i] + pk[i + 1]) ~/ 2];
+  final bounds = layout == '3x4+3' ? [0, mids[0], mids[1], mids[2]] : [0, ...mids, h];
+  final usedRows = [...rows, ?stripIdx];
+  final ref = stripIdx ?? usedRows.last; // reference row for the time axis: the strip, else the last row
 
   final out = List<Float64List>.generate(12, (_) => Float64List(1000)..fillRange(0, 1000, double.nan));
   final totalPx = 250 * ppm;
-  final rb = sig.colSums(bounds[3], bounds[4]);
+  final rb = sig.colSums(bounds[ref], bounds[ref + 1]);
   final rbMax = rb.reduce(math.max);
   // Threshold must not scale with the tallest complex: a flat tail is only trace-thickness high (see lite_digitizer.py).
   final on = [for (var x = 0; x < rb.length; x++) if (rb[x] > math.max(0.5, rbMax * 0.02)) x];
@@ -289,7 +310,7 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   final x0Glob = math.max(0, pyRound(x1Glob - totalPx));
   info['x_range'] = [x0Glob, x1Glob];
   List<double> vprof(int a, int b) => grid.colSums(a + ((b - a) * slab).toInt(), b - ((b - a) * slab).toInt());
-  final rl = rulerLines(vprof(bounds[3], bounds[4]), ppm);
+  final rl = rulerLines(vprof(bounds[ref], bounds[ref + 1]), ppm);
   final r = rl?.$1;
   final endMmR = r == null ? null : polyval(r, x1Glob.toDouble());
   info['ruler'] = r != null;
@@ -297,8 +318,8 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   // Row rulers chained upward from the rhythm strip so every row shares its mm origin (see lite_digitizer.py).
   final chain = <int, List<double>>{};
   if (rl != null) {
-    final tr = trackLines(grid, ppm, rl.$2, rl.$3, (bounds[3] + bounds[4]) ~/ 2, 0);
-    for (final row in [2, 1, 0]) {
+    final tr = trackLines(grid, ppm, rl.$2, rl.$3, (bounds[ref] + bounds[ref + 1]) ~/ 2, 0);
+    for (final row in usedRows.reversed.where((r) => r != ref)) {
       final ycRow = (bounds[row] + bounds[row + 1]) / 2;
       final half = (bounds[row + 1] - bounds[row]) * (0.5 - slab);
       final xs = <double>[], mm = <double>[];
@@ -317,7 +338,7 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   info['chained_rows'] = chain.keys.toList()..sort();
   final ti = [for (var i = 0; i < 1000; i++) i / 100.0];
 
-  for (var row = 0; row < 4; row++) {
+  for (final row in usedRows) {
     final y0b = bounds[row], y1b = bounds[row + 1], bh = y1b - y0b;
     // centroid y per column and validity
     final yC = Float64List(sig.w), vmax = Float64List(sig.w);
@@ -332,12 +353,12 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
       yC[x] = wy / (ws + 1e-9);
       vmax[x] = mx;
     }
-    final b = r == null ? null : (row == 3 ? r : (chain[row] ?? ruler(vprof(y0b, y1b), ppm)));
+    final b = r == null ? null : (row == ref ? r : (chain[row] ?? ruler(vprof(y0b, y1b), ppm)));
     late List<int> xs;
     late List<double> t;
     if (b != null) {
       // chained rows share the strip's origin; an unchained row falls back to whole-square alignment
-      final off = (row == 3 || chain.containsKey(row)) ? 0.0 : 5.0 * pyRound((polyval(r!, xc) - polyval(b, xc)) / 5.0);
+      final off = (row == ref || chain.containsKey(row)) ? 0.0 : 5.0 * pyRound((polyval(r!, xc) - polyval(b, xc)) / 5.0);
       xs = [for (var x = 0; x < sig.w; x++) x];
       t = [for (final x in xs) (polyval(b, x.toDouble()) + off - (endMmR! - 250.0)) / 25.0];
     } else {
@@ -359,12 +380,20 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
     }
     var samples = Float64List(1000)..fillRange(0, 1000, double.nan);
     if (tOk.length > 10) samples = interpNan(ti, tOk, vOk);
-    if (row == 3) {
+    if (row == stripIdx) {
       out[1] = samples;
       continue;
     }
+    if (layout == '12x1') {
+      final vals = [for (final v in samples) if (!v.isNaN) v];
+      final m = vals.isEmpty ? 0.0 : median(vals);
+      for (var i = 0; i < 1000; i++) {
+        out[row][i] = samples[i].isNaN ? double.nan : samples[i] - m;
+      }
+      continue;
+    }
     for (var c = 0; c < 4; c++) {
-      if (row == 1 && c == 0) continue;
+      if (row == 1 && c == 0 && stripIdx != null) continue;
       final j = leadNames.indexOf(_grid3x4[row][c]);
       final a = c * 250, e = (c + 1) * 250;
       final segVals = [for (var i = a; i < e; i++) samples[i]];

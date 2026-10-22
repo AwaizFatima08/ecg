@@ -329,17 +329,39 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
     # rows: horizontal profile of the signal map, smoothed over ~5 mm
     prof = gaussian_smooth(sig.sum(1), max(1.0, 2.5 * ppm))
     from scipy.signal import find_peaks
-    pk, props = find_peaks(prof, distance=max(3, int(15 * ppm)), prominence=prof.max() * 0.05)
-    if len(pk) < 4:
-        return None, {**info, "error": f"found {len(pk)} rows, need 4"}
-    pk = np.sort(pk[np.argsort(props["prominences"])[-4:]])
+    pk, props = find_peaks(prof, distance=max(3, int(8 * ppm)), prominence=prof.max() * 0.05)
+    # Layout from the number of trace rows (22 Oct 2026; Homi's web images): 4 = 3x4 + lead II strip, 3 = 3x4 without
+    # a strip, 6 = 3x4 + three strips (strips ignored: their leads are not labelled reliably), 12 = 12x1 stacked leads.
+    # Faint extra "rows" (labels, calibration marks) are dropped at 35 % prominence.
+    strong = pk[props["prominences"] >= prof.max() * 0.35]
+    pk = np.sort(strong if len(strong) in (3, 4, 6, 12) else pk)
+    n = len(pk)
+    if n == 4:
+        layout, rows, strip_idx = "3x4+1", list(range(3)), 3
+    elif n == 3:
+        layout, rows, strip_idx = "3x4", list(range(3)), None
+    elif n == 6:
+        layout, rows, strip_idx = "3x4+3", list(range(3)), None
+    elif n == 12:
+        layout, rows, strip_idx = "12x1", list(range(12)), None
+    else:
+        return None, {**info, "error": f"unsupported layout: found {n} trace rows", "rows_found": int(n)}
+    info["layout"] = layout
     info["rows_y"] = pk.tolist()
-    bounds = [0] + [int((pk[i] + pk[i + 1]) / 2) for i in range(3)] + [h]
+    # band boundaries: midpoints between consecutive rows; a strip row (n == 4) extends to the image bottom, the last
+    # 3x4 row of a 3x4+3 print ends where the strips begin
+    mids = [int((pk[i] + pk[i + 1]) / 2) for i in range(n - 1)]
+    bounds = [0] + mids + [h]
+    if layout == "3x4+3":
+        bounds = [0, mids[0], mids[1], mids[2]]  # rows 0-2 only; the strips below are ignored
+    used_rows = rows + ([strip_idx] if strip_idx is not None else [])
 
     out = np.full((12, 1000), np.nan, np.float32)
     total_px = 250 * ppm  # 10 s at 25 mm/s
-    # Time axis from the rhythm strip (bottom row, full 10 s): on a 3x4+1R print every row shares it.
-    rb = sig[bounds[3]:bounds[4]].sum(0)
+    # Time axis from the reference row (the rhythm strip when present, else the last 3x4 / 12x1 row: every row of a print
+    # shares the same 10 s axis).
+    ref = strip_idx if strip_idx is not None else used_rows[-1]
+    rb = sig[bounds[ref]:bounds[ref + 1]].sum(0)
     # Columns that hold trace: a flat tail is only ~trace-thickness pixels high, so the threshold must not scale with
     # the tallest complex (13 Oct 2026: ptbxl21243's 1.5 mV-wide complexes made rb.max() so large that the flat last
     # 0.35 s fell under an 8 % cut and the whole time axis shifted by 35 samples).
@@ -353,7 +375,7 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
     def vprof(a, b):  # vertical-line profile from the central part of a band: tilted lines smear less [13 Oct 2026]
         hh = b - a
         return grid[a + int(hh * SLAB):b - int(hh * SLAB)].sum(0)
-    RL = ruler_lines(vprof(bounds[3], bounds[4]), ppm)
+    RL = ruler_lines(vprof(bounds[ref], bounds[ref + 1]), ppm)
     R = RL[0] if RL is not None else None
     end_mm_r = float(np.polyval(R, X1)) if R is not None else None
     info["ruler"] = R is not None
@@ -364,9 +386,9 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
     chain = {}
     if RL is not None and CHAIN:
         if TRACK:
-            ys = int((bounds[3] + bounds[4]) / 2)
+            ys = int((bounds[ref] + bounds[ref + 1]) / 2)
             tr = track_lines(grid, ppm, RL[1], RL[2], ys, 0)
-            for row in (2, 1, 0):
+            for row in [r for r in reversed(used_rows) if r != ref]:
                 yc_row = (bounds[row] + bounds[row + 1]) / 2
                 # lines tracked through this row's band, pooled over the band's central slabs
                 pts = [(x, m) for (yy, xs_, mm_) in tr if abs(yy - yc_row) < (bounds[row + 1] - bounds[row]) * (0.5 - SLAB)
@@ -380,14 +402,14 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
                 chain[row] = c
         else:
             prev = (RL[1], RL[2])
-            for row in (2, 1, 0):
+            for row in [r for r in reversed(used_rows) if r != ref]:
                 rc = ruler_chain(vprof(bounds[row], bounds[row + 1]), ppm, prev[0], prev[1])
                 if rc is None:
                     break
                 chain[row] = rc[0]
                 prev = (rc[1], rc[2])
     info["chained_rows"] = sorted(chain)
-    for row in range(4):
+    for row in used_rows:
         band = sig[bounds[row]:bounds[row + 1]]
         gband = grid[bounds[row]:bounds[row + 1]]
         x0, x1 = X0, X1
@@ -395,10 +417,10 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
         wsum = band.sum(0) + 1e-9
         y = (band * ys).sum(0) / wsum
         valid = band.max(0) > 0.15
-        B = (R if row == 3 else chain.get(row, ruler(vprof(bounds[row], bounds[row + 1]), ppm))) if R is not None else None
+        B = (R if row == ref else chain.get(row, ruler(vprof(bounds[row], bounds[row + 1]), ppm))) if R is not None else None
         if B is not None:
-            # chained rows share the strip's origin (off = 0); an unchained row falls back to whole-square alignment
-            off = 0.0 if (row == 3 or row in chain) else 5.0 * round((np.polyval(R, xc) - np.polyval(B, xc)) / 5.0)
+            # chained rows share the reference row's origin (off = 0); an unchained row falls back to whole-square alignment
+            off = 0.0 if (row == ref or row in chain) else 5.0 * round((np.polyval(R, xc) - np.polyval(B, xc)) / 5.0)
             xs = np.arange(0, band.shape[1])
             t = (np.polyval(B, xs) + off - (end_mm_r - 250.0)) / 25.0
         else:
@@ -416,12 +438,15 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
         ok = ~np.isnan(v)
         if ok.sum() > 10:
             samples = np.interp(ti, t[ok], v[ok], left=np.nan, right=np.nan).astype(np.float32)
-        if row == 3:
+        if row == strip_idx:
             out[1] = samples  # rhythm strip: lead II, full 10 s
+            continue
+        if layout == "12x1":
+            out[row] = samples - np.nanmedian(samples) if np.isfinite(samples).any() else samples
             continue
         for c in range(4):
             j = LEADS.index(GRID_3x4[row][c])
-            if row == 1 and c == 0:  # lead II: the rhythm strip is used instead
+            if row == 1 and c == 0 and strip_idx is not None:  # lead II: the rhythm strip is used instead
                 continue
             seg_ = np.full(1000, np.nan, np.float32)
             a, b = c * 250, (c + 1) * 250

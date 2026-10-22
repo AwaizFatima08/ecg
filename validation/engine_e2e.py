@@ -72,6 +72,7 @@ def load_digitized(f: Path) -> np.ndarray | None:
             x[j] = np.interp(t_dst, t_src[ok], col[ok])
     if np.mean(cover) < 0.1:
         return None
+    load_digitized.last_cover = cover  # lead coverage of the last loaded file (lead II < 0.5 => no rhythm strip)
     return x
 
 
@@ -131,6 +132,7 @@ def main() -> int:
     for f in sorted(a.digitized.glob("*_timeseries_canonical.csv")):
         image = f.name.replace("_timeseries_canonical.csv", ".jpg")
         x = load_digitized(f)
+        no_strip = x is not None and load_digitized.last_cover[1] < 0.5  # 3x4 print without a lead II rhythm strip
         if x is None:
             reading = {
                 "image_quality": {"readable": False, "issues": ["other"], "confidence": 0.1},
@@ -143,13 +145,17 @@ def main() -> int:
             }
             readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
             continue
+        if no_strip:
+            # lead II is only its 2.5 s column: blank the rest so the classifier does not see a padded flat line
+            # (digitized-val AUC with lead II cut to 2.5 s is within 0.01 of the full strip on every major label)
+            x = x.copy(); x[1, 250:] = 0.0
         with torch.no_grad():
             xin = torch.from_numpy(paper_view(x[None], None))
             p = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in models], 0)
             if alt_models:
                 p2 = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in alt_models], 0)
                 p[alt_idx] = p2[alt_idx]
-        m = measure(x)
+        m = measure(x if not no_strip else np.concatenate([x[:1], np.tile(x[1:2, :250], (1, 4)), x[2:]], 0))  # no strip: repeat the 2.5 s window for rate/intervals
         bpm = m.get("rate_bpm")
         regular = m.get("rr_regular")
         rconf = 0.8 if bpm is not None and regular else (0.6 if bpm is not None else 0.0)
@@ -177,11 +183,12 @@ def main() -> int:
                              "name": "Q waves with persistent ST elevation (old infarct / aneurysm pattern)"})
         # Lethal-rhythm model on the lead II strip (VT / VF / asystole). Any of them is CRITICAL, so the alarm
         # fires on P(lethal) >= 0.5 and names the most likely one; the subtype itself is less reliable.
-        if rhythm_net is not None:
+        if rhythm_net is not None and not no_strip:  # the lethal-rhythm model needs the 10 s strip
             with torch.no_grad():
                 pr = torch.softmax(rhythm_net(torch.from_numpy(rhythm_prep(x[1][None]))), 1).numpy()[0]
             k = int(np.argmax(pr[1:])) + 1
-            if 1 - pr[0] >= 0.5 and lethal_plausible(x[1], ["", "vt", "vf", "asystole"][k], m.get("qrs_ms")):
+            # the lethal class itself must beat "other" (22 Oct: a 0.49/0.49 tie on a faint web image produced a false VF)
+            if 1 - pr[0] >= 0.5 and pr[k] > pr[0] and lethal_plausible(x[1], ["", "vt", "vf", "asystole"][k], m.get("qrs_ms")):
                 code = ["", "ventricular_tachycardia", "ventricular_fibrillation", "asystole"][k]
                 rhythm = {"code": code, "label": "Possible VT / VF or asystole (lethal-rhythm check)",
                           "regular": regular, "confidence": float(min(0.95, 1 - pr[0]))}
@@ -192,7 +199,7 @@ def main() -> int:
         # high-grade/complete block even when the classifier also calls AF, provided the P waves are regular (fibrillatory
         # waves are not), so the AF call only suppresses the faster, second-degree case (fibrillatory waves look like P waves).
         # Found on ptbxl00959 (complete heart block, escape 40/min, read as AF + URGENT), 13 Oct 2026.
-        if m.get("av_block_suspected") and (not af_like or (slow and m.get("atria_regular"))):
+        if m.get("av_block_suspected") and not no_strip and (not af_like or (slow and m.get("atria_regular"))):
             # [Homi approved 13 Oct 2026] with a slow ventricular rate (< 55) the block is likely high-grade/complete
             # -> CRITICAL; PTB-XL check: 25 % of complete blocks, 0.2 % of normals, 3.3 % of sinus bradycardias.
             findings.append({"code": "high_grade_av_block" if slow else "second_degree_av_block_mobitz2",
@@ -225,7 +232,8 @@ def main() -> int:
                           "qt_ms": m.get("qt_ms") if qtc is not None else None, "qtc_ms": qtc},
             "axis": {"label": m.get("axis_label", "cannot_assess"), "confidence": 0.7 if "axis_label" in m else 0},
             "findings": findings,
-            "model_notes": "On-device engine: digitized trace, classifier, rule-based intervals/axis and AV-block check.",
+            "model_notes": "On-device engine: digitized trace, classifier, rule-based intervals/axis and AV-block check."
+                           + (" No lead II rhythm strip on this print: rhythm checks limited to 2.5 s." if no_strip else ""),
         }
         readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
 

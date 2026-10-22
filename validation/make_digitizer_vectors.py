@@ -23,7 +23,8 @@ for name in names:
         grid = np.fromfile(grid_f, np.float32).reshape(h, w)
     else:
         seg = seg or Segmenter(None, HERE / "models" / "onnx" / "student_16_32_64_128_160_160.pt")
-        sig, grid = segment(cv2.imread(str(HERE / "images" / f"{name}.jpg")), seg, 1600, 0)
+        src = next(p for p in (HERE / "images" / f"{name}.jpg", HERE / "images_multan" / f"{name}.jpg", HERE / "private" / "homi_web8" / f"{name}.jpg") if p.exists())
+        sig, grid = segment(cv2.imread(str(src)), seg, 1600, 0)
         sig.astype(np.float32).tofile(sig_f); grid.astype(np.float32).tofile(grid_f)
         h, w = sig.shape
     x, info = postprocess(sig, grid)
