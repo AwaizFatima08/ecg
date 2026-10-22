@@ -63,7 +63,14 @@ class AboutScreen extends StatelessWidget {
               '• ECG tracing model: Open-ECG-Digitizer, Stenhede E., Bjørnstad A.M., Ranjbar A., '
               '"Digitizing Paper ECGs at Scale: An Open-Source Algorithm for Clinical Research", '
               'npj Digital Medicine (2026). Weights adapted (int8) under CC BY-SA 4.0.\n'
-              '• Training and test data: PTB-XL, Wagner P. et al., Scientific Data (2020), PhysioNet, CC BY 4.0.',
+              '• Training and test data: PTB-XL (Wagner P. et al., Scientific Data 2020, PhysioNet, CC BY 4.0); '
+              'ecg-arrhythmia — Chapman-Shaoxing and Ningbo (Zheng J. et al., PhysioNet, CC BY 4.0); '
+              'ACS 12-lead ECG dataset (Du et al., Scientific Data 2026, figshare, CC0); '
+              'Shandong Provincial Hospital database (Liu H. et al., Scientific Data 2022, figshare, CC0); '
+              'MIT-BIH Malignant Ventricular Ectopy and CU Ventricular Tachyarrhythmia databases (PhysioNet, ODC-By 1.0); '
+              'ECG Images dataset of Cardiac Patients (Ch. Pervaiz Elahi Institute of Cardiology, Multan; Mendeley Data, CC BY 4.0) — test only.\n'
+              '• Not detected by this version: hyperkalaemia, Brugada and torsades patterns, posterior and right-ventricular infarction, '
+              'pericarditis, Wellens and de Winter patterns, paediatric ECGs. Supported layout: standard 12-lead 3×4 print with a lead II rhythm strip.',
               style: TextStyle(fontSize: 13),
             ),
             ListTile(
