@@ -58,6 +58,9 @@ SNOMED = {
     "111975006": ["long_qt"], "164873001": ["lvh"], "89792004": ["rvh"], "251146004": ["low_voltage"],
     # Challenge-2021 Georgia codes (22 Oct 2026): regional ischaemia statements -> the ischaemia label
     "425623009": ["st_depression_ischaemia"], "425419005": ["st_depression_ischaemia"], "426434006": ["st_depression_ischaemia"],
+    # CPSC-2018 / Georgia codes added 22 Oct 2026 (census of the complete set)
+    "164884008": ["pvcs"], "427172004": ["pvcs"], "413844008": ["old_mi_q_waves"], "445118002": ["left_anterior_fascicular_block"],
+    "164931005": ["st_elevation_injury"],  # CPSC "ST elevation" — subject to the ischaemic-context rule below
 }
 # Challenge-2021 (Georgia + CPSC 2018 + CPSC extra; CC BY 4.0) — same WFDB layout and SNOMED "Dx:" comments as ecg-arrhythmia.
 CH21 = HERE / "data" / "challenge2021"
@@ -121,22 +124,23 @@ def acs_label_vector(r: dict) -> np.ndarray:
     return y
 # Rate-only rhythm statements (sinus brady/tachy, sinus arrhythmia), rotations and early repolarisation do not change the
 # morphology the classifier learns; rate is measured separately. A record with only these (+ SR) counts as "normal".
-BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006"}
+BENIGN = {"426783006", "426177001", "427084000", "427393009", "251199005", "251198002", "428417006", "426627000"}
+KNOWN_NEUTRAL = {"67741000119109", "39732003", "47665007", "713426002", "164867002"}  # LAE, axis, IRBBB, abnormal QRS: known but no label
 
 
 # SNOMED "ST elevation" (164930006) is a morphology statement that includes early repolarisation; Georgia-trained v8
 # became less sensitive to real infarcts (22 Oct 2026). It counts as acute injury only when an ischaemia / T-wave /
 # infarct statement co-occurs; otherwise the record is a (benign) negative for the injury label.
-STE_CODE = "164930006"
+STE_CODES = {"164930006", "164931005"}
 STE_CONTEXT = {"429622005", "428750005", "164934002", "59931005", "425623009", "425419005", "426434006",
-               "164865005", "164917005", "57054005", "413444003", "54329005", "73795002", "164861001"}
+               "164865005", "164917005", "57054005", "413444003", "54329005", "73795002", "164861001", "413844008"}
 
 
 def arr_label_vector(codes: set[str]) -> np.ndarray | None:
     y = np.zeros(len(NAMES), np.float32)
     known = False
     for c in codes:
-        if c == STE_CODE and not (codes & STE_CONTEXT):
+        if c in STE_CODES and not (codes & STE_CONTEXT):
             known = True  # ST elevation without ischaemic context: not injury (early-repolarisation-like negative)
             continue
         for lab in SNOMED.get(c, []):
@@ -145,6 +149,8 @@ def arr_label_vector(codes: set[str]) -> np.ndarray | None:
     if codes and codes <= BENIGN:
         y[NAMES.index("normal")] = 1.0
         known = True
+    if codes and codes <= (BENIGN | KNOWN_NEUTRAL):
+        known = True  # e.g. sinus rhythm + left axis: a negative for every label, not "normal"
     return y if known else None
 
 
