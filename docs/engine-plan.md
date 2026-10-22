@@ -263,6 +263,17 @@ Angiography-confirmed infarction labels did what morphology labels (Georgia) cou
 caught, with fewer false alarms. App assets: `ecgnet_v2_s{1,2,3}.onnx` re-exported from the v12 seeds, cut-offs from
 `models/v12/ensemble3_meta_v5.json`. Open: the 10 abnormal-heartbeat prints that dropped to "no critical pattern".
 
+**v14 / v15 (22 Oct 2026, 11:05–12:30) — v13 recipe + the complete Challenge-2021 set (20,125 records; CPSC/Georgia PVC,
+ST-elevation, old-MI and LAFB codes mapped; neutral codes count as known negatives). Not shipped.** 111,350 training
+records; base val macro-AUC 0.961; fine-tuned seeds 0.948–0.951 (ensemble 0.951 vs v13's 0.957). Against the adjudicated
+reference v15 ≈ v13 (71 vs 72 % agreement, critical → CRITICAL 59 vs 58, ≥ URGENT 64 both); on Multan it loses two MI
+prints (28/30 vs 30/30, CRITICAL 26 vs 29). Third time the morphology-labelled Challenge-2021 data fails to help the
+infarction heads; the ACS angiography labels are what matters. **App keeps v13.** Challenge-2021 stays on disk for the
+rhythm/conduction labels if ever needed (`INCLUDE_CH21=1`).
+
+Next target from the v13 Multan table: **51 of 86 unique "history of MI" prints are CRITICAL** — the old-infarct
+over-call Homi ruled on (old infarct ≠ emergency) is now the largest false-alarm bucket on real prints.
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 
