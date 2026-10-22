@@ -14,7 +14,7 @@ import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v13 (2026-10-22)';
+const engineVersion = 'on-device engine v13b (2026-10-22)';
 const rulesVersion = '2026-10-12.1-proposed';
 
 /// U-Net tile size in px (multiple of 128). 2048 = whole image at our 1600-px working size;
@@ -56,7 +56,8 @@ class EngineException implements Exception {
 
 /// Builds the structured reading from the digitized signal, measurements, classifier output and
 /// (optionally) the lethal-rhythm check. Same logic as validation/engine_e2e.py.
-Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<String, double> thr, [RhythmResult? rhythmCheck]) {
+Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<String, double> thr,
+    [RhythmResult? rhythmCheck, StMorphology? stm]) {
   final bpm = m.rateBpm;
   final regular = m.rrRegular;
   final rconf = bpm != null && regular == true ? 0.8 : (bpm != null ? 0.6 : 0.0);
@@ -80,6 +81,15 @@ Map<String, dynamic> buildReading(Measurements m, Map<String, double> p, Map<Str
     }
   }
   final afLike = fired.contains('atrial_fibrillation') || fired.contains('atrial_flutter');
+  // Homi, 21 Oct 2026: an old infarct is not an emergency — Q/QS with persistent ST elevation, inverted T and no
+  // reciprocal depression is URGENT, not CRITICAL (same logic as engine_e2e.py / st_morph.py).
+  if (stm != null && stm.chronicPattern && findings.any((f) => f['code'] == 'stemi_pattern')) {
+    findings.removeWhere((f) => f['code'] == 'stemi_pattern');
+    findings.add({
+      'code': 'old_mi_persistent_st_elevation', 'category': 'st_elevation', 'leads': <String>[], 'confidence': 0.6,
+      'name': 'Q waves with persistent ST elevation (old infarct / aneurysm pattern)',
+    });
+  }
   // Lethal-rhythm check on the lead II strip: any of VT / VF / asystole is CRITICAL, so the alarm fires on
   // P(lethal) >= threshold and names the most likely one (the subtype itself is less reliable).
   if (rhythmCheck != null && rhythmCheck.pLethal >= 0.5) {
@@ -155,7 +165,7 @@ Map<String, Object?> _digitizeAndMeasure((Map2D, Map2D) maps) {
   final res = postprocess(maps.$1, maps.$2);
   if (res.leads == null) return {'error': res.error};
   final x = fillGaps(res.leads!);
-  return {'x': x, 'm': measure(x)};
+  return {'x': x, 'm': measure(x), 'stm': stMorphology(x)};
 }
 
 class EcgEngine {
@@ -196,7 +206,7 @@ class EcgEngine {
       RhythmResult? rc = await _rhythm!.predict(x[1]);
       // lethal-rhythm gate (21 Oct 2026): drop a VT/VF/asystole call the beat detector contradicts
       if (rc.pLethal >= 0.5 && !lethalPlausible(x[1], rc.lethalClass, m.qrsMs)) rc = null;
-      reading = buildReading(m, p, _clf!.thresholds, rc);
+      reading = buildReading(m, p, _clf!.thresholds, rc, dm['stm'] as StMorphology?);
     }
     final ev = evaluateEcg(reading);
     return EcgResult.fromResponse({

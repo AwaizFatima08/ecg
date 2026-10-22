@@ -20,6 +20,7 @@ const findingTiers = <String, String>{
   'st_elevation_not_meeting_stemi': 'URGENT', 'wellens_pattern': 'URGENT', 'hyperacute_t_waves': 'URGENT',
   'st_depression': 'URGENT', 'second_degree_av_block_mobitz2': 'URGENT', 'long_qt': 'URGENT', 'nsvt': 'URGENT',
   'sinus_pause': 'URGENT', 'electrical_alternans': 'URGENT', 'pericarditis_pattern': 'URGENT',
+  'old_mi_persistent_st_elevation': 'URGENT',
   't_wave_inversion': 'ABNORMAL', 'pathological_q_waves': 'ABNORMAL', 'first_degree_av_block': 'ABNORMAL',
   'second_degree_av_block_mobitz1': 'ABNORMAL', 'lbbb': 'ABNORMAL', 'rbbb': 'ABNORMAL',
   'left_anterior_fascicular_block': 'ABNORMAL', 'left_posterior_fascicular_block': 'ABNORMAL',

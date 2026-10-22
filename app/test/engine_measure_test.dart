@@ -24,4 +24,23 @@ void main() {
     }
     expect(mismatches, 0);
   });
+
+  test('ST morphology / chronic-pattern matches the Python reference', () {
+    final recs = jsonDecode(File('test/vectors/measure.json').readAsStringSync()) as List;
+    var n = 0;
+    for (final r in recs.cast<Map<String, dynamic>>()) {
+      final want = r['stm'] as Map<String, dynamic>?;
+      if (want == null) continue;
+      final x = [for (final lead in r['x'] as List) [for (final v in lead as List) (v as num).toDouble()]];
+      final got = stMorphology(x);
+      expect(got, isNotNull, reason: r['name'] as String);
+      expect(got!.steLeads, (want['ste_leads'] as List).cast<int>(), reason: '${r['name']} ste_leads');
+      expect((got.steFracQ - (want['ste_frac_q'] as num)).abs(), lessThan(1e-6), reason: '${r['name']} frac_q');
+      expect((got.steFracTInv - (want['ste_frac_tinv'] as num)).abs(), lessThan(1e-6), reason: '${r['name']} frac_tinv');
+      expect((got.recipMinSt - (want['recip_min_st'] as num)).abs(), lessThan(1e-6), reason: '${r['name']} recip');
+      expect(got.chronicPattern, want['chronic'], reason: '${r['name']} chronic');
+      n++;
+    }
+    expect(n, greaterThan(20));
+  });
 }

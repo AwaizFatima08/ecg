@@ -61,6 +61,9 @@ export const FINDING_TIERS: Partial<Record<FindingCode, Tier>> = {
   sinus_pause: "URGENT",
   electrical_alternans: "URGENT",
   pericarditis_pattern: "URGENT",
+  // Homi, 21 Oct 2026: an old infarct is not an emergency — Q/QS with persistent ST elevation, inverted T and no
+  // reciprocal depression (aneurysm pattern) is URGENT, never CRITICAL.
+  old_mi_persistent_st_elevation: "URGENT",
 
   // ABNORMAL — abnormal, not time-critical on this image alone
   t_wave_inversion: "ABNORMAL",

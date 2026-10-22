@@ -17,7 +17,7 @@ EXCLUDES=(--exclude 'build/' --exclude '.dart_tool/' --exclude 'node_modules/'
 
 echo "== Local mirror -> $LOCAL/current"
 mkdir -p "$LOCAL"
-rsync -a --delete "${EXCLUDES[@]}" --exclude 'validation/data/' "$SRC/" "$LOCAL/current/"
+rsync -a --delete "${EXCLUDES[@]}" --exclude 'validation/data/' --exclude 'validation/private/' "$SRC/" "$LOCAL/current/"
 
 echo "== Local snapshot archive"
 tar -C "$(dirname "$SRC")" -czf "$LOCAL/ecg_${STAMP}.tar.gz" \
@@ -32,6 +32,6 @@ rclone sync "$SRC" "gdrive:" --drive-root-folder-id "$DRIVE_FOLDER_ID" \
   "${EXCLUDES[@]}" --exclude '.git/**' --exclude 'secrets/**' --exclude '.env*' \
   --exclude '**/key.properties' --exclude '*.jks' --exclude '*.keystore' \
   --exclude '**/google-services.json' --exclude '**/local.properties' \
-  --exclude 'validation/data/**' --exclude 'validation/images/**' --exclude 'validation/real_ecgs/**' \
+  --exclude 'validation/data/**' --exclude 'validation/private/**' --exclude 'validation/images/**' --exclude 'validation/real_ecgs/**' \
   --fast-list --transfers 8
 echo "Backup complete ($STAMP)."

@@ -21,6 +21,7 @@ import torch
 from scipy.signal import butter, filtfilt, find_peaks
 
 from ecg_measure import lethal_plausible, measure
+from st_morph import chronic_pattern, st_morphology
 from train_rhythm import RhythmNet, prep as rhythm_prep
 from train_classifier import COLUMN, EcgNet, paper_view
 
@@ -166,6 +167,14 @@ def main() -> int:
             else:
                 findings.append({"code": code, "name": name, "leads": [], "category": cat, "confidence": conf})
         af_like = bool(fired & {"atrial_fibrillation", "atrial_flutter"})
+        # Homi, 21 Oct 2026: an old infarct is not an emergency. When every ST-elevated lead carries a Q/QS wave with an
+        # inverted T and there is no reciprocal depression, the ST-elevation call is an old infarct with persistent
+        # ST elevation (aneurysm pattern) -> URGENT, not CRITICAL. Validated 22 Oct: 0 of 29 Multan MI prints and 0 of
+        # 68 PTB-XL injury records trigger it; 9 of 51 "history of MI" prints and 4 abnormal-heartbeat prints do.
+        if any(f["code"] == "stemi_pattern" for f in findings) and chronic_pattern(st_morphology(x)):
+            findings = [f for f in findings if f["code"] != "stemi_pattern"]
+            findings.append({"code": "old_mi_persistent_st_elevation", "category": "st_elevation", "leads": [], "confidence": 0.6,
+                             "name": "Q waves with persistent ST elevation (old infarct / aneurysm pattern)"})
         # Lethal-rhythm model on the lead II strip (VT / VF / asystole). Any of them is CRITICAL, so the alarm
         # fires on P(lethal) >= 0.5 and names the most likely one; the subtype itself is less reliable.
         if rhythm_net is not None:

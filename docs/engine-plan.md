@@ -274,6 +274,19 @@ rhythm/conduction labels if ever needed (`INCLUDE_CH21=1`).
 Next target from the v13 Multan table: **51 of 86 unique "history of MI" prints are CRITICAL** — the old-infarct
 over-call Homi ruled on (old infarct ≠ emergency) is now the largest false-alarm bucket on real prints.
 
+**v13b (22 Oct 2026, 13:00–14:30) — old infarct with persistent ST elevation is URGENT, not CRITICAL. SHIPPED.**
+Under v13, 51 of 86 unique Multan "history of MI" prints were CRITICAL, all via the STEMI call. New per-lead ST/Q/T
+morphology on the median beat (`validation/st_morph.py`, Dart `stMorphology`): when every ST-elevated lead (≥ 1 mm at
+J+60) carries a Q/QS wave with an inverted T and no reciprocal depression is present, the STEMI call becomes
+`old_mi_persistent_st_elevation` (new finding code, URGENT in `alertRules.ts` / `rules.dart`). Chosen as the most
+conservative of four candidate rules (`st_morph.py` experiments): it fires on **0 of 29** Multan MI prints and **0 of 68**
+PTB-XL injury records; stronger variants (ignore the T wave; "no measurable ST elevation") would have cost 1–3 true MI
+prints and up to 42 PTB-XL injury records and were rejected. Effect: Multan old-MI CRITICAL 51 → **42** of 86,
+abnormal-heartbeat CRITICAL 40 → 36; Phase 0 and MI prints unchanged. Dart parity on 28 vectors (incl. 7 Multan prints).
+Remaining old-MI false CRITICALs (42): 20 have no measurable ST elevation at all (classifier fires STE at 0.8–0.98 on
+Q waves + T inversion); a rule on that would hurt true injury, so this needs training signal — the ACS "old MI" cases
+are not labelled as such, SPH has 243 "Old" statements (used).
+
 Devices on `ptbxl00959_photo` with v7d (all CRITICAL, 41/min, "Possible high-grade / complete AV block"): Galaxy A12 35 s,
 Tab S9 FE ~10 s, Oppo Reno 14F 11 s, Mi 9 Lite correct (not timed; MIUI blocks UI dumps). S23 Ultra not available.
 

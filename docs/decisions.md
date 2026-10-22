@@ -49,6 +49,9 @@ Homi approved in chat, after the morning report on v7d:
   prints and their copies). Range reads were resolved with the two rules above (rate rules win; old infarct ≤ URGENT).
   Phase 0 reference = PTB-XL tier map, overridden by `adjudication.csv`. This is Homi's self-review; the cardiologist
   review gate still stands.
+- **22 Oct 2026 — new finding code `old_mi_persistent_st_elevation` (URGENT)** implements "an old infarct is not an
+  emergency" in the engine: STEMI call + every ST-elevated lead with Q/QS and inverted T + no reciprocal depression.
+  Validated to fire on no true-infarction record in any test set before shipping (v13b).
 These remain subject to the cardiologists' review before release (gate above).
 
 ## Decisions taken during the build (12 Oct 2026)

@@ -37,13 +37,18 @@ HERE_ = Path(__file__).resolve().parent
 files = sorted((HERE_ / "engines" / "out_lite_1600").glob("*_timeseries_canonical.csv"))[:20]
 # complete heart block with tall P waves (escape rhythm 40/min): exercises the second-pass R-peak gate
 files += [HERE_ / "engines" / "out_phase0_student" / "ptbxl00959_photo_timeseries_canonical.csv"]
+files += [HERE_ / "engines" / "out_multan_v7h" / f"{n}_timeseries_canonical.csv" for n in ("oldmi_6", "oldmi_12", "oldmi_105", "oldmi_11", "mi_1", "mi_104", "normal_147")]
 for f in files:
     x = load_digitized(f)
     if x is None:
         continue
     m = measure(x)
     keys = ["rate_bpm", "rr_regular", "pr_ms", "qrs_ms", "qt_ms", "qtc_ms", "axis_deg", "axis_label", "atrial_rate_bpm", "av_block_suspected", "atria_regular"]
+    from st_morph import st_morphology, chronic_pattern
+    sm = st_morphology(x)
+    stm = None if sm is None else {"ste_leads": sm["ste_leads"], "ste_frac_q": sm.get("ste_frac_q", 0.0), "ste_frac_tinv": sm.get("ste_frac_tinv", 0.0),
+                                   "recip_min_st": sm.get("recip_min_st", 0.0), "chronic": chronic_pattern(sm)}
     recs.append({"name": f.name, "x": np.round(x.astype(np.float64), 6).tolist(),
-                 "m": {k: (bool(m[k]) if isinstance(m.get(k), (bool, np.bool_)) else m.get(k)) for k in keys}})
+                 "m": {k: (bool(m[k]) if isinstance(m.get(k), (bool, np.bool_)) else m.get(k)) for k in keys}, "stm": stm})
 (OUT / "measure.json").write_text(json.dumps(recs))
 print("measure vectors:", len(recs))

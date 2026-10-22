@@ -350,3 +350,89 @@ bool lethalPlausible(List<double> lead2, String cls, int? qrsMs) {
   return wide && (rate == null || rate >= 90); // vt
 }
 
+/// Per-lead ST / Q / T morphology on the median beat (port of validation/st_morph.py, 22 Oct 2026).
+class StMorphology {
+  StMorphology(this.steLeads, this.steFracQ, this.steFracTInv, this.recipMinSt, this.steMax);
+  final List<int> steLeads;
+  final double steFracQ, steFracTInv, recipMinSt, steMax;
+
+  /// Old infarct with persistent ST elevation: every ST-elevated lead carries a Q/QS wave with an inverted T and
+  /// there is no reciprocal depression (Homi, 21 Oct 2026: an old infarct is not an emergency).
+  bool get chronicPattern => steLeads.isNotEmpty && steFracQ >= 0.99 && steFracTInv >= 0.5 && recipMinSt > -0.05;
+}
+
+const _recip = <int, List<int>>{0: [2, 5], 4: [2, 5], 2: [0, 4], 5: [0, 4], 1: [4], 10: [2, 5], 11: [2, 5]};
+
+StMorphology? stMorphology(List<List<double>> x) {
+  final r = rPeaks(x[1]);
+  if (r.length < 3) return null;
+  const pre = 35, post = 60;
+  final mb = medianBeats(x, r, pre, post);
+  final validLeads = [for (var j = 0; j < 12; j++) if (mb[j] != null) j];
+  if (validLeads.length < 6) return null;
+  final velRaw = Float64List(pre + post - 1);
+  for (var k = 0; k < velRaw.length; k++) {
+    var s = 0.0;
+    for (final j in validLeads) {
+      final d = mb[j]![k + 1] - mb[j]![k];
+      s += d * d;
+    }
+    velRaw[k] = math.sqrt(s);
+  }
+  final vel = movingAverageSame(velRaw, 2);
+  var peak = pre - 8;
+  for (var k = pre - 8; k < pre + 8; k++) {
+    if (vel[k] > vel[peak]) peak = k;
+  }
+  final thr = 0.30 * vel[peak] + median(vel.sublist(0, 15));
+  var on = peak;
+  while (on > 5 && vel[on - 1] > thr) {
+    on--;
+  }
+  var off = peak;
+  while (off < vel.length - 2 && vel[off + 1] > thr) {
+    off++;
+  }
+  off++;
+  final st = <int, double>{}, qDepth = <int, double>{}, qDur = <int, double>{}, qs = <int, bool>{}, tAmp = <int, double>{};
+  for (final j in validLeads) {
+    final b = mb[j]!;
+    final base = median(b.sublist(math.max(0, on - 12), math.max(1, on - 2)));
+    final qrs = [for (var k = on; k < off; k++) b[k] - base];
+    final rmax = qrs.isEmpty ? 0.0 : qrs.reduce(math.max);
+    var qd = 0.0;
+    var k = 0;
+    while (on + k < off && qrs[k] <= 0.02) {
+      qd = math.min(qd, qrs[k]);
+      k++;
+    }
+    qDepth[j] = qd;
+    qDur[j] = k * 1000 / fs;
+    qs[j] = rmax < 0.1 && (qrs.isEmpty ? 0.0 : qrs.reduce(math.min)) < -0.2;
+    st[j] = b[math.min(off + 6, b.length - 1)] - base; // J + 60 ms
+    final t0 = math.min(off + 10, b.length - 1), t1 = math.min(off + 40, b.length);
+    var ta = 0.0;
+    for (var i = t0; i < t1; i++) {
+      final v = b[i] - base;
+      if (v.abs() > ta.abs()) ta = v;
+    }
+    tAmp[j] = ta;
+  }
+  final ste = [for (final j in validLeads) if (st[j]! >= 0.10 && j != 3) j];
+  if (ste.isEmpty) return StMorphology(ste, 0, 0, 0, 0);
+  var nq = 0, nt = 0;
+  var recipMin = 0.0, haveRecip = false, steMax = -1e9;
+  for (final j in ste) {
+    if (qs[j]! || (qDepth[j]! <= -0.1 && qDur[j]! >= 30)) nq++;
+    if (tAmp[j]! < -0.05) nt++;
+    if (st[j]! > steMax) steMax = st[j]!;
+    for (final k in _recip[j] ?? const <int>[]) {
+      if (st.containsKey(k)) {
+        if (!haveRecip || st[k]! < recipMin) recipMin = st[k]!;
+        haveRecip = true;
+      }
+    }
+  }
+  return StMorphology(ste, nq / ste.length, nt / ste.length, haveRecip ? recipMin : 0.0, steMax);
+}
+

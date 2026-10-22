@@ -38,6 +38,7 @@ export const FINDING_CODES = [
   "diffuse_st_depression_with_avr_elevation",
   "t_wave_inversion",
   "pathological_q_waves",
+  "old_mi_persistent_st_elevation",
   "pericarditis_pattern",
   "early_repolarisation",
   // conduction
