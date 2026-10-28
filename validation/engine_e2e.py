@@ -119,7 +119,8 @@ def main() -> int:
             ck2 = torch.load(mp, map_location="cpu")
             m2 = EcgNet(len(ck2["labels"]), ck2["width"]); m2.load_state_dict(ck2["state_dict"]); alt_models.append(m2.eval())
         alt_names = [n for n in a.alt_labels.split(",") if n]
-        alt_idx = [labels.index(n) for n in alt_names]
+        alt_labels = ck2["labels"]
+        alt_idx = [(labels.index(n) if n in labels else None, alt_labels.index(n)) for n in alt_names]  # (main slot or None, alt slot)
         alt_thr = json.load(open(a.alt_meta))["thresholds"] if a.alt_meta else meta["thresholds"]
         for n in alt_names:
             thr[n] = alt_thr[n]
@@ -152,9 +153,14 @@ def main() -> int:
         with torch.no_grad():
             xin = torch.from_numpy(paper_view(x[None], None))
             p = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in models], 0)
+            p_extra = {}  # alt-ensemble outputs the main ensemble does not have (e.g. v16 territory heads)
             if alt_models:
                 p2 = np.mean([torch.sigmoid(m_(xin)).numpy()[0] for m_ in alt_models], 0)
-                p[alt_idx] = p2[alt_idx]
+                for n, (mi, ai) in zip(alt_names, alt_idx):
+                    if mi is not None:
+                        p[mi] = p2[ai]
+                    else:
+                        p_extra[n] = float(p2[ai])
         m = measure(x if not no_strip else np.concatenate([x[:1], np.tile(x[1:2, :250], (1, 4)), x[2:]], 0))  # no strip: repeat the 2.5 s window for rate/intervals
         bpm = m.get("rate_bpm")
         regular = m.get("rr_regular")
@@ -162,8 +168,8 @@ def main() -> int:
         findings, rhythm = [], None
         fired = set()
         for k, n in enumerate(labels):
-            if n == "normal" or p[k] < thr[n]:
-                continue
+            if n == "normal" or n not in MAP or p[k] < thr[n]:
+                continue  # territory outputs (mi_anterior / mi_inferior / mi_lateral, v16) are reported, not alerted on
             fired.add(n)
             kind, code, cat, name = MAP[n]
             conf = float(min(0.95, 0.5 + 0.5 * p[k]))
@@ -235,7 +241,10 @@ def main() -> int:
             "model_notes": "On-device engine: digitized trace, classifier, rule-based intervals/axis and AV-block check."
                            + (" No lead II rhythm strip on this print: rhythm checks limited to 2.5 s." if no_strip else ""),
         }
-        readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading})
+        terr = {n[3:]: round(float(p[labels.index(n)]) if n in labels else p_extra[n], 3)
+                for n in ("mi_anterior", "mi_inferior", "mi_lateral") if n in labels or n in p_extra}
+        readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading,
+                         **({"territory": terr} if terr else {})})
 
     tmp = HERE / "images" / f"readings_{a.run}.raw.jsonl"
     tmp.write_text("\n".join(json.dumps(r) for r in readings) + "\n")

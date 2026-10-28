@@ -301,6 +301,21 @@ tunes `v7_v16_s{1,2,3}`; same `wait_free` / thermal pacing as v12. To be evaluat
 PTB-DB test split and the 8 web images; a territory line in the reading ("inferior STEMI, reciprocal changes in I/aVL")
 needs the per-lead ST morphology (`st_morph.py`) joined to the model output, plus Dart, meta and parity work — not shipped.
 
+Result (28 Oct, 12:15–13:30). Training ran 10:59–12:15 without a watchdog stop; base val macro-AUC 0.968, digitized-val
+ensemble 0.953 (= v13). Territory AUC on held-out digital records: PTB-XL 0.96 / 0.95 / 0.92 (anterior / inferior /
+lateral), PTB-DB held-out patients 0.99 / 0.93 / 0.87 (top territory correct on 35/35 MI records), ACS angiography
+0.90 / 0.88 / 0.91, SPH 1.00 / 0.98 / –. Phase 0 photo + scan renders (88 with a PTB-XL infarct territory): top
+territory correct 77/88; anterior sens 53/66, inferior 24/40, lateral 26/38 at 0.5; 18 of 164 non-infarct renders show a
+territory ≥ 0.5. Web images: both inferior prints 0.98 inferior; #4 (lateral) antero-lateral 0.99 / 0.84; #2 (anterior)
+called inferior 0.96; the two posterior prints get no territory (posterior = lateral in the labels, and only a handful
+of posterior cases exist). **As the alert model (run v17) the v16 ensemble is slightly worse than v13c** — Phase 0
+critical → CRITICAL 54/66 (v13c 58), ≥ URGENT 62/66 (64), Multan MI ≥ URGENT 29/30 (30/30), normal false alarms 6 (8),
+web images 5/8 CRITICAL (7/8) — so it is not a replacement. **Run v17b = v13c alerts + v16 as a territory-only side
+ensemble** (`engine_e2e.py --alt-model … --alt-labels mi_anterior,mi_inferior,mi_lateral`): tiers identical to v13c on
+Phase 0 and the web images, Multan identical except one abnormal-heartbeat print (threshold meta v7 vs v5), with a
+territory line available for every reading. Decision pending with Homi: ship the territory as a sentence in the reading
+(second ONNX ensemble, ~7 MB and ~1 s more on a phone) or keep it on the review pages only.
+
 **v13c (22 Oct 2026, evening) — layouts, strip-aware engine, paced floor. SHIPPED as v1.0.0+3.** Homi's 8 web images
 (400–530 px; anterior 1–2, lateral 3–4, posterior 5–6, inferior 7–8) exposed three layout failures: 12×1 stacked leads
 (#1, misread as 3×4), 3×4 without a rhythm strip (#5, digitizer failure) and 3×4 + three strips (#8, rows mis-assigned
