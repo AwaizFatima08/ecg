@@ -37,6 +37,7 @@ Work through these **in order**. The app is not releasable until every box in se
 - [ ] Final app name (D7) and icon
 - [x] Bump `version:` in `app/pubspec.yaml` (1.0.0+2, 22 Oct 2026)
 - [x] `flutter build appbundle --release` — 22 Oct 2026, v1.0.0+2 (engine v13b): `dist/ecg-reader-1.0.0+2.aab` (134.5 MB) and `dist/ecg-reader-1.0.0+2-arm64-release.apk` (94 MB), signed with the HomiLabs key (SHA-256 eb29…cd12)
+- [ ] **v1.0.0+4 (28 Oct 2026, engine v13c + scale gate)**: bundle (134.6 MB) and arm64 APK (94.2 MB) built and signed with the HomiLabs key: `dist/ecg-reader-1.0.0+4.aab`, `dist/ecg-reader-1.0.0+4-arm64-release.apk`; adds the print-scale check (refuses book-page scans, reduced copies, thumbnails and prints with no detectable grid; 150/150 book pages refused, 60 good photos unchanged) and the updated About text. Still to do: install on the Oppo / A12 / Mi 9 Lite, run the manual list below, and **test a real sample of phone photos of prints** (gate margin is thin: good <= 0.11, book >= 0.157)
 - [~] Release APK installed fresh on the Oppo Reno 14F (22 Oct): disclaimer with both boxes, gallery → crop → quality warning on a blurred image → reading CRITICAL in 9 s, no image files left in app storage; A12 / Mi 9 Lite pending
 
 ## D. Play Console

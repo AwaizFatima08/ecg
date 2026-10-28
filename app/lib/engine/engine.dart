@@ -14,7 +14,7 @@ import 'rhythm.dart';
 import 'rules.dart';
 import 'segmenter.dart';
 
-const engineVersion = 'on-device engine v13c (2026-10-22)';
+const engineVersion = 'on-device engine v13c + scale gate (2026-10-28)';
 const rulesVersion = '2026-10-12.1-proposed';
 
 /// U-Net tile size in px (multiple of 128). 2048 = whole image at our 1600-px working size;
