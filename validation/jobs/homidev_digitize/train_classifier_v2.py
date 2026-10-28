@@ -29,7 +29,7 @@ import torch.nn as nn
 import wfdb
 from scipy.signal import resample_poly
 
-from train_classifier import EcgNet, LABELS, MI_CODES, NAMES, ZERO_LIKELIHOOD_OK, auc, label_vector, paper_view
+from train_classifier import EcgNet, LABELS, MI_CODES, NAMES, TERRITORY, ZERO_LIKELIHOOD_OK, auc, label_vector, paper_view
 
 HERE = Path(__file__).resolve().parent
 PTB = HERE / "data" / "ptbxl"
@@ -61,7 +61,11 @@ SNOMED = {
     # CPSC-2018 / Georgia codes added 22 Oct 2026 (census of the complete set)
     "164884008": ["pvcs"], "427172004": ["pvcs"], "413844008": ["old_mi_q_waves"], "445118002": ["left_anterior_fascicular_block"],
     "164931005": ["st_elevation_injury"],  # CPSC "ST elevation" — subject to the ischaemic-context rule below
+    # territory codes (28 Oct 2026): CPSC-extra "MI in anterior leads" / anterior MI / inferior MI
+    "164861001": ["old_mi_q_waves", "mi_anterior"], "54329005": ["old_mi_q_waves", "mi_anterior"], "73795002": ["old_mi_q_waves", "mi_inferior"],
 }
+# PTB Diagnostic ECG Database (ptbdb, ODC-By 1.0): 549 records, 1000 Hz, header "Acute infarction (localization): ..."
+PTBDB = HERE / "data" / "ptbdb"
 # Challenge-2021 (Georgia + CPSC 2018 + CPSC extra; CC BY 4.0) — same WFDB layout and SNOMED "Dx:" comments as ecg-arrhythmia.
 CH21 = HERE / "data" / "challenge2021"
 # ACS-Chongqing (Du et al., Sci Data 2026, CC0): 19,955 angiography-confirmed ECGs, WFDB 500 Hz 10 s, labels in CSV/*.csv.
@@ -77,9 +81,16 @@ SPH_MAP = {  # AHA code -> our label; modifiers: 332 Old, 362 Depression, 363 El
     "101": ["left_anterior_fascicular_block"], "104": ["lbbb"], "106": ["rbbb"], "108": ["wpw_preexcitation"],
     "125": ["low_voltage"], "142": ["lvh"], "143": ["rvh"], "146": ["st_depression_ischaemia"], "147": ["t_wave_abnormality"],
     "148": ["long_qt"], "153": ["t_wave_abnormality"], "160": ["old_mi_q_waves"], "161": ["old_mi_q_waves"],
-    "162": ["old_mi_q_waves"], "163": ["old_mi_q_waves"], "164": ["old_mi_q_waves"], "165": ["old_mi_q_waves"],
-    "166": ["old_mi_q_waves"], "167": ["old_mi_q_waves"],
+    "162": ["old_mi_q_waves"], "163": ["old_mi_q_waves"], "164": ["old_mi_q_waves"], "165": ["old_mi_q_waves", "mi_anterior"],
+    "166": ["old_mi_q_waves", "mi_anterior"], "167": ["old_mi_q_waves"],
 }
+SPH_MAP["160"] = ["old_mi_q_waves", "mi_anterior"]; SPH_MAP["161"] = ["old_mi_q_waves", "mi_inferior"]
+
+
+def territory_from_text(txt: str) -> np.ndarray:
+    """PTB-DB localization text -> (anterior, inferior, lateral) flags; posterior counts as lateral."""
+    t = txt.lower()
+    return np.array([float("anter" in t), float("infer" in t), float(any(k in t for k in ("later", "poster")))], np.float32)
 SPH_MI = {"160", "161", "162", "163", "164", "165", "166", "167"}
 
 
@@ -121,6 +132,16 @@ def acs_label_vector(r: dict) -> np.ndarray:
     else:  # angiography-negative
         y[i] = 0.0; y[a] = 0.0
     y[NAMES.index("paced_rhythm")] = 1.0 if r.get("PACED") == "1" else 0.0
+    # territory from the culprit vessel (STEMI / OMI rows only); angiography-negative rows are territory negatives
+    if stemi or omi:
+        lad = any(r.get(v) == "1" for v in ("LM", "PLAD", "MLAD", "DLAD", "DB"))
+        rca = any(r.get(v) == "1" for v in ("PRCA", "MRCA", "DRCA"))
+        lcx = any(r.get(v) == "1" for v in ("PLCX", "MLCX", "DLCX", "OM"))
+        if lad or rca or lcx:
+            y[NAMES.index("mi_anterior")], y[NAMES.index("mi_inferior")], y[NAMES.index("mi_lateral")] = float(lad), float(rca), float(lcx)
+    elif not (nstemi or ua):
+        for n in TERRITORY:
+            y[NAMES.index(n)] = 0.0
     return y
 # Rate-only rhythm statements (sinus brady/tachy, sinus arrhythmia), rotations and early repolarisation do not change the
 # morphology the classifier learns; rate is measured separately. A record with only these (+ SR) counts as "normal".
@@ -151,6 +172,11 @@ def arr_label_vector(codes: set[str]) -> np.ndarray | None:
         known = True
     if codes and codes <= (BENIGN | KNOWN_NEUTRAL):
         known = True  # e.g. sinus rhythm + left axis: a negative for every label, not "normal"
+    # SNOMED infarct / injury codes without a territory code: territory not assessed (masked), not "no territory"
+    if (y[NAMES.index("old_mi_q_waves")] or y[NAMES.index("st_elevation_injury")] or y[NAMES.index("acute_or_recent_mi")]) \
+            and not any(y[NAMES.index(n)] for n in TERRITORY):
+        for n in TERRITORY:
+            y[NAMES.index(n)] = UNKNOWN
     return y if known else None
 
 
@@ -204,7 +230,9 @@ def build_cache() -> None:
     print(f"ecg-arrhythmia: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
     # --- Challenge-2021 subsets present on disk (500 Hz -> 100 Hz, first 10 s) ---
     n0, skipped = len(X), 0
-    for sub in ("georgia", "cpsc_2018", "cpsc_2018_extra") if os.environ.get("INCLUDE_CH21", "1") != "0" else ():
+    ch21 = os.environ.get("INCLUDE_CH21", "1")
+    subs = () if ch21 == "0" else (("georgia", "cpsc_2018", "cpsc_2018_extra") if ch21 == "1" else tuple(ch21.split(",")))
+    for sub in subs:
         for mat in sorted((CH21 / sub).rglob("*.mat")) if (CH21 / sub).exists() else []:
             rel = str(mat.with_suffix(""))
             try:
@@ -276,6 +304,46 @@ def build_cache() -> None:
             h = int(hashlib.md5(r["Patient_ID"].encode()).hexdigest()[:8], 16) % 100
             split.append("test" if h < 5 else "val" if h < 10 else "train")
     print(f"sph: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
+    # --- PTB Diagnostic DB (ODC-By): 1000 Hz -> 100 Hz, first 10 s; MI territory from the header, healthy controls as normal ---
+    n0, skipped = len(X), 0
+    if (PTBDB / "RECORDS").exists():
+        for line in open(PTBDB / "RECORDS"):
+            rel = line.strip().rstrip("/")
+            if not rel or not (PTBDB / f"{rel}.dat").exists():
+                continue
+            try:
+                rec = wfdb.rdrecord(str(PTBDB / rel))
+            except Exception:
+                skipped += 1; continue
+            names = [s.upper() for s in rec.sig_name]
+            if rec.fs != 1000 or rec.sig_len < 10000 or any(l not in names for l in LEADS):
+                skipped += 1; continue
+            hdr = {c.split(":", 1)[0].strip(): c.split(":", 1)[1].strip() for c in rec.comments if ":" in c}
+            reason = hdr.get("Reason for admission", "")
+            y = np.full(len(NAMES), UNKNOWN, np.float32)
+            if reason == "Healthy control":
+                y[:] = 0.0; y[NAMES.index("normal")] = 1.0
+            elif reason == "Myocardial infarction":
+                terr = np.zeros(3, np.float32)
+                for key in ("Acute infarction (localization)", "Former infarction (localization)"):
+                    v = hdr.get(key, "")
+                    if v and v not in ("no", "n/a", "unknown"):
+                        terr = np.maximum(terr, territory_from_text(v))
+                if terr.sum() == 0:
+                    skipped += 1; continue
+                for k, n in enumerate(TERRITORY):
+                    y[NAMES.index(n)] = terr[k]
+                y[NAMES.index("old_mi_q_waves")] = 1.0
+                y[NAMES.index("normal")] = 0.0
+            else:
+                skipped += 1; continue
+            sig = resample_poly(np.nan_to_num(rec.p_signal)[:10000, [names.index(l) for l in LEADS]], 1, 10, axis=0)[:1000]
+            if sig.shape[0] < 1000 or not np.isfinite(sig).all():
+                skipped += 1; continue
+            X.append(sig.T.astype(np.float16)); Y.append(y); src.append("ptbdb")
+            h = int(hashlib.md5(rel.split("/")[0].encode()).hexdigest()[:8], 16) % 100  # split by patient
+            split.append("test" if h < 15 else "val" if h < 30 else "train")
+    print(f"ptbdb: {len(X) - n0} records, skipped {skipped} ({time.time() - t0:.0f}s)", flush=True)
     CACHE.parent.mkdir(exist_ok=True)
     np.savez(CACHE, x=np.stack(X), y=np.stack(Y), src=np.array(src), split=np.array(split))
     print("cache:", CACHE, np.stack(X).shape, flush=True)

@@ -61,7 +61,12 @@ LABELS: dict[str, list[str]] = {
     "paced_rhythm": ["PACE"],
     "low_voltage": ["LVOLT"],
     "normal": ["NORM"],
+    # MI territory (28 Oct 2026): any infarct / injury statement in that territory, acute or old; posterior counts as lateral
+    "mi_anterior": ["ASMI", "AMI", "ALMI", "INJAS", "INJAL"],
+    "mi_inferior": ["IMI", "ILMI", "IPMI", "IPLMI", "INJIN", "INJIL"],
+    "mi_lateral": ["LMI", "ILMI", "ALMI", "IPLMI", "PMI", "INJLA", "INJIL", "INJAL"],
 }
+TERRITORY = ["mi_anterior", "mi_inferior", "mi_lateral"]
 MI_CODES = set(LABELS["old_mi_q_waves"]) - {"QWAVE"}
 ZERO_LIKELIHOOD_OK = {"AFIB", "AFLT", "SVTAC", "PSVT", "PVC", "BIGU", "TRIGU", "PAC", "SVARR", "PACE", "LVOLT"}
 NAMES = list(LABELS)
