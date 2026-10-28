@@ -287,6 +287,20 @@ Remaining old-MI false CRITICALs (42): 20 have no measurable ST elevation at all
 Q waves + T inversion); a rule on that would hurt true injury, so this needs training signal — the ACS "old MI" cases
 are not labelled as such, SPH has 243 "Old" statements (used).
 
+**v16 (28 Oct 2026, queued on homidev 10:59) — MI territory. IN PROGRESS, candidate only.** Homi's 8 web images (anterior,
+lateral, posterior, inferior) showed that the engine reports "ST-elevation injury" without saying where. Three new
+classifier outputs — `mi_anterior`, `mi_inferior`, `mi_lateral` (posterior counts as lateral; 26 labels) — are trained
+with the v13 recipe plus the PTB Diagnostic Database (ODC-By 1.0, 549 records / 290 subjects at 1000 Hz; 368 MI records
+from 148 patients with the infarct localization in the header; split by patient 70/15/15; healthy controls as normal).
+Territory sources: PTB-XL statements (anterior 2,556 / inferior 2,242 / lateral 1,007 records), ACS-Chongqing culprit
+vessel on STEMI/OMI rows (LAD/LM/diagonal → anterior 452, RCA → inferior 467, LCX/OM → lateral 300; angiography-
+negative rows are territory negatives, NSTEMI/UA rows masked), SPH codes 160/165/166 → anterior (150), 161 → inferior
+(120), CPSC-extra SNOMED 164861001/54329005 → anterior, 73795002 → inferior; SNOMED infarct codes without a territory
+code are masked (unknown), not "no territory". Queue `run_v16.sh`: cache `signals_v7.npz`, base `ecgnet_v7.pt`, fine-
+tunes `v7_v16_s{1,2,3}`; same `wait_free` / thermal pacing as v12. To be evaluated as v17 on Phase 0, Multan, the
+PTB-DB test split and the 8 web images; a territory line in the reading ("inferior STEMI, reciprocal changes in I/aVL")
+needs the per-lead ST morphology (`st_morph.py`) joined to the model output, plus Dart, meta and parity work — not shipped.
+
 **v13c (22 Oct 2026, evening) — layouts, strip-aware engine, paced floor. SHIPPED as v1.0.0+3.** Homi's 8 web images
 (400–530 px; anterior 1–2, lateral 3–4, posterior 5–6, inferior 7–8) exposed three layout failures: 12×1 stacked leads
 (#1, misread as 3×4), 3×4 without a rhythm strip (#5, digitizer failure) and 3×4 + three strips (#8, rows mis-assigned
