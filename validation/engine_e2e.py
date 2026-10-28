@@ -133,7 +133,7 @@ def main() -> int:
     for f in sorted(a.digitized.glob("*_timeseries_canonical.csv")):
         image = f.name.replace("_timeseries_canonical.csv", ".jpg")
         x = load_digitized(f)
-        no_strip = x is not None and load_digitized.last_cover[1] < 0.5  # 3x4 print without a lead II rhythm strip
+        no_strip = x is not None and (load_digitized.last_cover[1] < 0.5 or bool(__import__("os").environ.get("FORCE_NO_STRIP")))  # 3x4 print without a lead II rhythm strip (FORCE_NO_STRIP: experiment, 28 Oct 2026)
         if x is None:
             reading = {
                 "image_quality": {"readable": False, "issues": ["other"], "confidence": 0.1},

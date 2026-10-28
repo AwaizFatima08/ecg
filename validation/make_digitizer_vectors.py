@@ -23,12 +23,15 @@ for name in names:
         grid = np.fromfile(grid_f, np.float32).reshape(h, w)
     else:
         seg = seg or Segmenter(None, HERE / "models" / "onnx" / "student_16_32_64_128_160_160.pt")
-        src = next(p for p in (HERE / "images" / f"{name}.jpg", HERE / "images_multan" / f"{name}.jpg", HERE / "private" / "homi_web8" / f"{name}.jpg") if p.exists())
+        src = next(p for p in (HERE / "images" / f"{name}.jpg", HERE / "images_multan" / f"{name}.jpg", HERE / "private" / "homi_web8" / f"{name}.jpg", HERE / "private" / "homi_zip2" / "jpg" / f"{name}.jpg") if p.exists())
         sig, grid = segment(cv2.imread(str(src)), seg, 1600, 0)
         sig.astype(np.float32).tofile(sig_f); grid.astype(np.float32).tofile(grid_f)
         h, w = sig.shape
     x, info = postprocess(sig, grid)
-    assert x is not None, (name, info)
+    if x is None:  # refusal case (scale gate etc.): Dart must refuse with the same message
+        cases[name] = {"name": name, "w": int(w), "h": int(h), "error": info["error"], "info": {k: v for k, v in info.items() if isinstance(v, (int, float, str))}}
+        print(name, "REFUSED:", info["error"], info.get("scale_dev"))
+        continue
     cases[name] = {"name": name, "w": int(w), "h": int(h), "info": {k: (list(v) if isinstance(v, tuple) else v) for k, v in info.items()},
                    "x": [[None if np.isnan(v) else round(float(v), 6) for v in lead] for lead in x]}
     print(name, info)

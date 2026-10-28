@@ -18,6 +18,15 @@ void main() {
           Map2D(w, h, File('${dir.path}/${c['name']}_$k.bin').readAsBytesSync().buffer.asFloat32List());
       final res = postprocess(load('sig'), load('grid'));
       final info = c['info'] as Map<String, dynamic>;
+      if (c['error'] != null) {
+        // refusal case (grid not found / scale gate): the app must refuse with the same message and no leads
+        expect(res.leads, isNull, reason: '${c['name']} must be refused');
+        expect(res.error, c['error'], reason: c['name']);
+        if (info['scale_dev'] != null) {
+          expect(((res.info['scale_dev'] as double) - (info['scale_dev'] as num)).abs(), lessThan(0.005), reason: '${c['name']} scale_dev');
+        }
+        continue;
+      }
       expect(res.error, isNull, reason: c['name']);
       expect(res.info['rotation_deg'], info['rotation_deg'], reason: '${c['name']} rotation');
       expect(((res.info['px_per_mm'] as double) / (info['px_per_mm'] as num) - 1).abs(), lessThan(0.005));

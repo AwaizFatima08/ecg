@@ -70,7 +70,7 @@ class AboutScreen extends StatelessWidget {
               'MIT-BIH Malignant Ventricular Ectopy and CU Ventricular Tachyarrhythmia databases (PhysioNet, ODC-By 1.0); '
               'ECG Images dataset of Cardiac Patients (Ch. Pervaiz Elahi Institute of Cardiology, Multan; Mendeley Data, CC BY 4.0) — test only.\n'
               '• Not detected by this version: hyperkalaemia, Brugada and torsades patterns, posterior and right-ventricular infarction, '
-              'pericarditis, Wellens and de Winter patterns, paediatric ECGs. Supported layout: standard 12-lead 3×4 print with a lead II rhythm strip.',
+              'pericarditis, Wellens and de Winter patterns, paediatric ECGs. Supported: a photo or scan of an original standard 12-lead print (25 mm/s, 10 s across; 3×4 with or without a lead II rhythm strip, 3×4 with three strips, or 12 stacked leads). Reduced or re-sized copies, such as textbook pages or thumbnails, are refused because their scale cannot be checked.',
               style: TextStyle(fontSize: 13),
             ),
             ListTile(

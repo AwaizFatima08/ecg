@@ -326,6 +326,18 @@ digitized trace is too poor for the classifier. Needs (a) an "image too small / 
 tier is shown, (b) a re-test of the same pages at print resolution. The pages are copyrighted book material, kept only in
 `validation/private/homi_zip2` (git-ignored, not backed up); readings in `homi_reading_all.csv` there.
 
+**Scale gate (28 Oct 2026) — the engine refuses prints whose scale it cannot trust.** The 150-page book test showed the
+failure is not image width: clean Phase 0 photos shrunk to 508 px (60 images; agreement 70 % → 57 %, critical → ≥ URGENT
+20/20, no false AF) and forced to the no-strip path (55 %) still read sensibly. The book pages differ in scale: the paper grid
+is found strongly (autocorrelation 0.83) but its px/mm disagrees with the trace-length estimate (10 s ≈ 258 mm) by 16–23 %,
+against ≤ 11 % on 187 of 188 sampled good prints (Phase 0 photos 40 + scans 31, Multan 77, plus 40 shrunk copies; one scan 0.149).
+Gate: refuse (UNREADABLE) when no grid estimate is found, or when |ppm / prior − 1| > 0.13 (`SCALE_TOLERANCE` in
+`lite_digitizer.py`, `scaleTolerance` in `digitizer.dart`; Dart parity vectors include three refusal cases). Result on the
+150 pages: **150/150 refused** (0 tiers shown); 60 good Phase 0 photos digitized bit-identically; Multan sample 77/77 and
+Phase 0 scans 30/31 accepted (the one refused scan is the 0.149 outlier). Web image 1 (12×1 thumbnail) is now refused as "grid not
+found". The margin is thin (good ≤ 0.11 vs book ≥ 0.157, one good outlier at 0.149), so the gate is a heuristic, tuned to
+fail safe; a real-world sample of phone photos is still needed. Needs a new app build (not yet built).
+
 **v18 / v19 (28 Oct 2026, 13:06–14:19) — separate posterior head. NOT ADOPTED.** v16 recipe plus `mi_posterior` (PTB-XL PMI/IPMI/
 IPLMI ≈ 100 records, PTB-DB "posterior" ≈ 40; 27 labels). Held-out test AUC 0.96 but on only 12 positives. Web images
 (v19 = v13c alerts + v18 heads): the posterior head fires on the inferior prints (#2 0.83, #7 0.59, #8 0.78 — infero-posterior

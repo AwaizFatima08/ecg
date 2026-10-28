@@ -128,7 +128,14 @@ def gaussian_smooth(x: np.ndarray, sigma: float) -> np.ndarray:
     return np.convolve(np.pad(x, r, mode="edge"), k, mode="valid")
 
 
+SCALE_TOLERANCE = 0.13  # |grid px/mm / (trace width / 258 mm) - 1|: 187 of 188 sampled good prints <= 0.11 (one scan 0.149), all 150 book pages >= 0.157 (28 Oct 2026)
+
+
 def grid_period(grid: np.ndarray, prior_ppm: float) -> float:
+    return grid_period_found(grid, prior_ppm)[0]
+
+
+def grid_period_found(grid: np.ndarray, prior_ppm: float) -> tuple[float, bool]:
     """Pixels per mm. The trace width gives a prior (a 10 s print is about 255 mm wide); the 5 mm major-grid
     period is then searched within +/-25 % of 5*prior in the grid map's autocorrelation and refined to sub-pixel."""
     ests = []
@@ -146,7 +153,7 @@ def grid_period(grid: np.ndarray, prior_ppm: float) -> float:
         if d < 0:
             lag = lag + 0.5 * (ac[lag - 1] - ac[lag + 1]) / d
         ests.append(lag / 5)
-    return float(np.median(ests)) if ests else prior_ppm
+    return (float(np.median(ests)), True) if ests else (prior_ppm, False)
 
 
 def grid_lines(profile: np.ndarray, ppm: float) -> tuple[np.ndarray, float] | None:
@@ -321,10 +328,18 @@ def postprocess(sig: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray | None, d
     if len(cols) < 10:
         return None, {**info, "error": "no trace found"}
     prior = (cols[-1] - cols[0]) / 258.0
-    ppm = grid_period(grid, prior)
+    ppm, grid_found = grid_period_found(grid, prior)
     info["px_per_mm"] = ppm
     if not ppm or ppm < 2:
         return None, {**info, "error": "grid not found"}
+    # Scale self-check (28 Oct 2026): the grid's own scale must agree with the trace length (a standard print is
+    # 10 s = about 258 mm wide). When it does not, the time axis and amplitudes cannot be trusted (book-page scans,
+    # reduced or non-standard prints) and the engine must say so instead of showing a tier.
+    info["scale_dev"] = abs(ppm / prior - 1)
+    if not grid_found:
+        return None, {**info, "error": "grid not found"}
+    if info["scale_dev"] > SCALE_TOLERANCE:
+        return None, {**info, "error": "grid scale does not match the trace length (not a standard 25 mm/s, 10 s print)"}
 
     # rows: horizontal profile of the signal map, smoothed over ~5 mm
     prof = gaussian_smooth(sig.sum(1), max(1.0, 2.5 * ppm))

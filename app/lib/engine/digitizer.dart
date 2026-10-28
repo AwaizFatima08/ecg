@@ -111,7 +111,13 @@ double bestRotation(Map2D grid) {
   return best([for (var k = 0; k <= 6; k++) coarse - 0.75 + 0.25 * k]);
 }
 
-double gridPeriod(Map2D grid, double prior) {
+/// Largest accepted |grid px/mm / (trace width / 258 mm) - 1| (lite_digitizer.SCALE_TOLERANCE): 187 of 188 sampled good
+/// prints <= 0.11 (one scan 0.149), all 150 book-page scans >= 0.157 (28 Oct 2026).
+const scaleTolerance = 0.13;
+
+double gridPeriod(Map2D grid, double prior) => gridPeriodFound(grid, prior).$1;
+
+(double, bool) gridPeriodFound(Map2D grid, double prior) {
   final ests = <double>[];
   final lo = (5 * prior * 0.75).toInt(), hi = (5 * prior * 1.25).ceil();
   for (final prof0 in [grid.colSums(), grid.rowSums()]) {
@@ -139,7 +145,7 @@ double gridPeriod(Map2D grid, double prior) {
     if (d < 0) lagF = lag + 0.5 * (acs[lag - 1]! - acs[lag + 1]!) / d;
     ests.add(lagF / 5);
   }
-  return ests.isEmpty ? prior : median(ests);
+  return ests.isEmpty ? (prior, false) : (median(ests), true);
 }
 
 /// Pixel positions of the 5 mm major vertical lines in a band profile and their median spacing (null if not found).
@@ -265,9 +271,15 @@ DigitizeResult postprocess(Map2D sig0, Map2D grid0) {
   final cols = [for (var x = 0; x < colS.length; x++) if (colS[x] > colMax * 0.05) x];
   if (cols.length < 10) return DigitizeResult(null, info, 'no trace found');
   final prior = (cols.last - cols.first) / 258.0;
-  final ppm = gridPeriod(grid, prior);
+  final (ppm, gridFound) = gridPeriodFound(grid, prior);
   info['px_per_mm'] = ppm;
   if (ppm < 2) return DigitizeResult(null, info, 'grid not found');
+  // Scale self-check: the grid's own scale must agree with the trace length (10 s = about 258 mm on a standard print).
+  info['scale_dev'] = (ppm / prior - 1).abs();
+  if (!gridFound) return DigitizeResult(null, info, 'grid not found');
+  if ((info['scale_dev'] as double) > scaleTolerance) {
+    return DigitizeResult(null, info, 'grid scale does not match the trace length (not a standard 25 mm/s, 10 s print)');
+  }
 
   final prof = gaussianSmooth(sig.rowSums(), math.max(1.0, 2.5 * ppm));
   final profMax = prof.reduce(math.max);

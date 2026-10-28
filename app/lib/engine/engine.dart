@@ -157,7 +157,8 @@ Map<String, dynamic> unreadableReading(String why) => {
       'intervals': {'pr_ms': null, 'qrs_ms': null, 'qt_ms': null, 'qtc_ms': null},
       'axis': {'label': 'cannot_assess', 'confidence': 0},
       'findings': <Map<String, dynamic>>[],
-      'model_notes': 'The trace could not be extracted: $why. Supported: standard 12-lead 3x4 print with a lead II rhythm strip.',
+      'model_notes': 'The trace could not be extracted: $why. Supported: standard 12-lead 3x4 print with a lead II rhythm strip.'
+          '${why.startsWith('grid scale') ? ' Use a photo or scan of the original print (25 mm/s, 10 s across), not a reduced or re-sized copy.' : ''}',
     };
 
 // Isolate entry: digitize + measure (pure Dart, CPU heavy).
