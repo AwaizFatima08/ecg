@@ -316,6 +316,16 @@ Phase 0 and the web images, Multan identical except one abnormal-heartbeat print
 territory line available for every reading. Decision pending with Homi: ship the territory as a sentence in the reading
 (second ONNX ensemble, ~7 MB and ~1 s more on a phone) or keep it on the review pages only.
 
+**Small-scan test (28 Oct 2026): 150 book-page scans, 508 px wide, read by Homi.** Engine v13c (+ v16 territory) vs Homi's
+readings of all 150 pages: acute ST-elevation infarcts (16) — ST-elevation pattern 5/16, ≥ URGENT 12/16, CRITICAL 8/16;
+old infarcts (11) — Q/old-MI finding 2/11; ischaemia without STE (11) — ST/T finding 3/11; wide-complex / ventricular
+tachycardia (10) — none flagged; sinus pages (101) called AF 41, paced 16, SVT 10, flutter 12, VF 8 (sinus on 14);
+AF/flutter/SVT/paced named correctly 11/32; 12/122 non-STE pages got an ST-elevation call, 31/122 ended CRITICAL; WPW 0/10,
+1st-degree block 0/7, left anterior hemiblock 0/13. Same failure as the 400–530 px web images: below ~1000 px width the
+digitized trace is too poor for the classifier. Needs (a) an "image too small / low resolution" gate in the app before a
+tier is shown, (b) a re-test of the same pages at print resolution. The pages are copyrighted book material, kept only in
+`validation/private/homi_zip2` (git-ignored, not backed up); readings in `homi_reading_all.csv` there.
+
 **v18 / v19 (28 Oct 2026, 13:06–14:19) — separate posterior head. NOT ADOPTED.** v16 recipe plus `mi_posterior` (PTB-XL PMI/IPMI/
 IPLMI ≈ 100 records, PTB-DB "posterior" ≈ 40; 27 labels). Held-out test AUC 0.96 but on only 12 positives. Web images
 (v19 = v13c alerts + v18 heads): the posterior head fires on the inferior prints (#2 0.83, #7 0.59, #8 0.78 — infero-posterior
