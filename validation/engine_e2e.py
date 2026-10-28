@@ -242,7 +242,7 @@ def main() -> int:
                            + (" No lead II rhythm strip on this print: rhythm checks limited to 2.5 s." if no_strip else ""),
         }
         terr = {n[3:]: round(float(p[labels.index(n)]) if n in labels else p_extra[n], 3)
-                for n in ("mi_anterior", "mi_inferior", "mi_lateral") if n in labels or n in p_extra}
+                for n in ("mi_anterior", "mi_inferior", "mi_lateral", "mi_posterior") if n in labels or n in p_extra}
         readings.append({"image": image, "model": a.run, "promptVersion": a.run, "ms": 0, "reading": reading,
                          **({"territory": terr} if terr else {})})
 

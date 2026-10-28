@@ -333,6 +333,8 @@ def build_cache() -> None:
                     skipped += 1; continue
                 for k, n in enumerate(TERRITORY):
                     y[NAMES.index(n)] = terr[k]
+                y[NAMES.index("mi_posterior")] = float(any("poster" in hdr.get(key, "").lower()
+                                                        for key in ("Acute infarction (localization)", "Former infarction (localization)")))
                 y[NAMES.index("old_mi_q_waves")] = 1.0
                 y[NAMES.index("normal")] = 0.0
             else:

@@ -316,6 +316,14 @@ Phase 0 and the web images, Multan identical except one abnormal-heartbeat print
 territory line available for every reading. Decision pending with Homi: ship the territory as a sentence in the reading
 (second ONNX ensemble, ~7 MB and ~1 s more on a phone) or keep it on the review pages only.
 
+**v18 / v19 (28 Oct 2026, 13:06–14:19) — separate posterior head. NOT ADOPTED.** v16 recipe plus `mi_posterior` (PTB-XL PMI/IPMI/
+IPLMI ≈ 100 records, PTB-DB "posterior" ≈ 40; 27 labels). Held-out test AUC 0.96 but on only 12 positives. Web images
+(v19 = v13c alerts + v18 heads): the posterior head fires on the inferior prints (#2 0.83, #7 0.59, #8 0.78 — infero-posterior
+is common) and not on the two posterior prints (#5, #6: 0.00); territory cut-offs from the tuning policy came out very low
+(0.14–0.16) and gave 51 of 164 non-infarct Phase 0 renders a territory (v16: 27). Top territory correct 80/88 (v16: 77).
+Conclusion: too few posterior cases to learn or validate a posterior head; the v16 territory heads remain the candidate.
+Posterior MI stays on the "not detected" list. Tiers on Phase 0 identical to v13c.
+
 **v13c (22 Oct 2026, evening) — layouts, strip-aware engine, paced floor. SHIPPED as v1.0.0+3.** Homi's 8 web images
 (400–530 px; anterior 1–2, lateral 3–4, posterior 5–6, inferior 7–8) exposed three layout failures: 12×1 stacked leads
 (#1, misread as 3×4), 3×4 without a rhythm strip (#5, digitizer failure) and 3×4 + three strips (#8, rows mis-assigned

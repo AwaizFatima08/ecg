@@ -65,8 +65,10 @@ LABELS: dict[str, list[str]] = {
     "mi_anterior": ["ASMI", "AMI", "ALMI", "INJAS", "INJAL"],
     "mi_inferior": ["IMI", "ILMI", "IPMI", "IPLMI", "INJIN", "INJIL"],
     "mi_lateral": ["LMI", "ILMI", "ALMI", "IPLMI", "PMI", "INJLA", "INJIL", "INJAL"],
+    # posterior MI as its own head (28 Oct 2026); also kept inside mi_lateral. PTB-XL has ~100 records, PTB-DB ~40
+    "mi_posterior": ["PMI", "IPMI", "IPLMI"],
 }
-TERRITORY = ["mi_anterior", "mi_inferior", "mi_lateral"]
+TERRITORY = ["mi_anterior", "mi_inferior", "mi_lateral"]  # posterior is deliberately not in this list: ACS/SNOMED rows leave it UNKNOWN
 MI_CODES = set(LABELS["old_mi_q_waves"]) - {"QWAVE"}
 ZERO_LIKELIHOOD_OK = {"AFIB", "AFLT", "SVTAC", "PSVT", "PVC", "BIGU", "TRIGU", "PAC", "SVARR", "PACE", "LVOLT"}
 NAMES = list(LABELS)
